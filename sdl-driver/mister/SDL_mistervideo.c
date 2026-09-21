@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <linux/fb.h>
 #include <linux/kd.h>
 #include <linux/vt.h>
@@ -219,6 +220,18 @@ static void MISTER_VTLeave(MISTER_Data *d)
 
 /* Without udev SDL_EVDEV only opens the devices named in SDL_EVDEV_DEVICES ("class:path,..."),
    so scan /dev/input ourselves and classify each device by its capability bits. */
+/* Opening every input node to classify it is slow on the MiSTer (closing them in particular costs tens of ms in
+   total), and this runs on the game's main thread. So remember what each node was the last time it was opened and
+   only open it again when the node is new or was replaced (a different inode or creation time). */
+typedef struct {
+    ino_t ino;
+    struct timespec ctim;
+    int known;      /* 1 once classified */
+    int cls;        /* device class bits, 0 = not usable */
+    char name[128];
+} MISTER_InputNode;
+static MISTER_InputNode mister_input_nodes[32];
+
 static void MISTER_BuildInputList(char *list, size_t size, SDL_bool log)
 {
     size_t len = 0;
@@ -226,39 +239,58 @@ static void MISTER_BuildInputList(char *list, size_t size, SDL_bool log)
 
     list[0] = '\0';
     for (i = 0; i < 32; i++) {
-        unsigned long ev[NBITS(EV_MAX)] = { 0 }, abs_[NBITS(ABS_MAX)] = { 0 };
-        unsigned long key[NBITS(KEY_MAX)] = { 0 }, rel[NBITS(REL_MAX)] = { 0 };
-        char path[40], name[128] = "";
-        int fd, cls, n;
+        MISTER_InputNode *node = &mister_input_nodes[i];
+        struct stat st;
+        char path[40];
+        int n;
 
         SDL_snprintf(path, sizeof(path), "/dev/input/event%d", i);
-        fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
-        if (fd < 0) {
+        if (stat(path, &st) < 0) {
+            node->known = 0;
             continue;
         }
-        ioctl(fd, EVIOCGNAME(sizeof(name)), name);
-        ioctl(fd, EVIOCGBIT(0, sizeof(ev)), ev);
-        ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(abs_)), abs_);
-        ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key)), key);
-        ioctl(fd, EVIOCGBIT(EV_REL, sizeof(rel)), rel);
-        close(fd);
+        if (!node->known || node->ino != st.st_ino || node->ctim.tv_sec != st.st_ctim.tv_sec ||
+            node->ctim.tv_nsec != st.st_ctim.tv_nsec) {
+            unsigned long ev[NBITS(EV_MAX)] = { 0 }, abs_[NBITS(ABS_MAX)] = { 0 };
+            unsigned long key[NBITS(KEY_MAX)] = { 0 }, rel[NBITS(REL_MAX)] = { 0 };
+            int fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
 
-        cls = SDL_EVDEV_GuessDeviceClass(ev, abs_, key, rel) &
-              (SDL_UDEV_DEVICE_MOUSE | SDL_UDEV_DEVICE_KEYBOARD | SDL_UDEV_DEVICE_TOUCHSCREEN | SDL_UDEV_DEVICE_TOUCHPAD);
-        /* Main_MiSTer's own uinput device would echo its input back to us. */
-        if (!cls || SDL_strstr(name, "MiSTer virtual input")) {
+            if (fd < 0) {
+                node->known = 0;
+                continue;
+            }
+            node->name[0] = '\0';
+            ioctl(fd, EVIOCGNAME(sizeof(node->name)), node->name);
+            ioctl(fd, EVIOCGBIT(0, sizeof(ev)), ev);
+            ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(abs_)), abs_);
+            ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key)), key);
+            ioctl(fd, EVIOCGBIT(EV_REL, sizeof(rel)), rel);
+            close(fd);
+
+            node->cls = SDL_EVDEV_GuessDeviceClass(ev, abs_, key, rel) &
+                        (SDL_UDEV_DEVICE_MOUSE | SDL_UDEV_DEVICE_KEYBOARD | SDL_UDEV_DEVICE_TOUCHSCREEN | SDL_UDEV_DEVICE_TOUCHPAD);
+            /* Main_MiSTer's own uinput device would echo its input back to us. */
+            if (SDL_strstr(node->name, "MiSTer virtual input")) {
+                node->cls = 0;
+            }
+            node->ino = st.st_ino;
+            node->ctim = st.st_ctim;
+            node->known = 1;
+        }
+
+        if (!node->cls) {
             if (log) {
-                DBG("input: skip %s (%s)", path, name);
+                DBG("input: skip %s (%s)", path, node->name);
             }
             continue;
         }
-        n = SDL_snprintf(list + len, size - len, "%s%d:%s", len ? "," : "", cls, path);
+        n = SDL_snprintf(list + len, size - len, "%s%d:%s", len ? "," : "", node->cls, path);
         if (n < 0 || (size_t)n >= size - len) {
             break;
         }
         len += (size_t)n;
         if (log) {
-            DBG("input: %s class=0x%x (%s)", path, cls, name);
+            DBG("input: %s class=0x%x (%s)", path, node->cls, node->name);
         }
     }
 }
