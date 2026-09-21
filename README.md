@@ -68,8 +68,27 @@ full-frame copy costs about 4 ms of the frame budget.
 
 ## Installation
 
-1. Build the bundle (see [Building](#building)) or use a bundle you have already
-   built.
+### From a release
+
+1. Download `MiSTer-VCMI-v<version>.zip` from the
+   [Releases](https://github.com/aquasock/MiSTer-VCMI/releases) page and unzip it
+   onto the root of the MiSTer's SD card, merging with what is there. This creates
+   `/media/fat/vcmi` and `/media/fat/Scripts/vcmi.sh`. The location matters: the
+   programs find their libraries under `/media/fat/vcmi`.
+2. Copy the `Data`, `Maps` and `Mp3` folders from your Heroes III install into
+   `/media/fat/vcmi/data`. For the GOG release, unpack the installer with
+   [innoextract](https://constexpr.org/innoextract/) first; `VIDEO.VID` is not
+   needed.
+3. On the MiSTer, open the OSD (F12), choose **Scripts**, and run **vcmi**. The screen
+   blinks as the output switches to 800x600, and the game starts. Quit from the
+   game's own menu; the launcher switches your display back.
+
+The zip also holds `INSTALL.txt`, the license texts in `LICENSES/`, and
+`SOURCES.txt` listing the exact source versions and checksums.
+
+### From source
+
+1. Build the bundle (see [Building](#building)).
 2. Copy it to the MiSTer over SSH. `scripts/deploy.sh` logs in as `root` with the
    stock MiSTer password; edit `scripts/deploy.sh` if yours differs.
 
@@ -88,9 +107,7 @@ full-frame copy costs about 4 ms of the frame budget.
    MISTER_HOST=<your MiSTer's IP> scripts/deploy.sh data
    ```
 
-4. On the MiSTer, open the OSD (F12), choose **Scripts**, and run **vcmi**. The
-   screen blinks as the output switches to 800x600, and the game starts. Quit from
-   the game's own menu; the launcher switches your display back.
+4. Launch it from the OSD as above.
 
 To remove it, delete `/media/fat/vcmi` and `/media/fat/Scripts/vcmi.sh`.
 
@@ -180,13 +197,19 @@ are in `scripts/env.sh`. Each dependency step leaves a stamp, so a rerun skips
 finished work; changing the SDL drivers or patches rebuilds SDL automatically.
 Downloads come from GitHub, Debian, and Ubuntu's ports archive.
 
+`scripts/release.sh <version>` builds the release zip (`work/dist/`) from a fresh
+bundle: it leaves out the test programs and any game data, adds every license text
+and the source list, and writes `SHA256SUMS`. Release notes live in
+`docs/release-notes/`.
+
 `scripts/deploy.sh tools` copies the on-device test tools to the MiSTer's `/tmp`,
 which a reboot wipes.
 
 ## Source layout
 
 - `scripts/` — `env.sh` (versions and paths), `toolchain.cmake`, `build-deps.sh`,
-  `build-vcmi.sh`, `bundle.sh` (also generates the launcher) and `deploy.sh`.
+  `build-vcmi.sh`, `bundle.sh` (also generates the launcher), `deploy.sh` and
+  `release.sh`.
 - `sdl-driver/mister/` — the SDL2 video driver; `sdl-driver/mister-audio/` — the SDL2
   audio driver.
 - `sdl-driver/*.patch` — the changes to SDL that register the drivers and speed up
@@ -200,6 +223,7 @@ which a reboot wipes.
 
 ## Documentation
 
+- [Release notes](docs/release-notes/0.1.0.md)
 - [Tools](tools/README.md)
 - [Source attributions](ATTRIBUTIONS.md)
 - [Upstream VCMI documentation](https://github.com/vcmi/vcmi/tree/develop/docs)

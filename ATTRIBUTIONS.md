@@ -50,8 +50,10 @@ and not stored in this repository.
   [vcmi-assets](https://github.com/vcmi/vcmi-assets) repository for sources and
   contributors.
 - The `Noto Sans` and `Noto Serif` fonts inside the VCMI mod are from the Noto
-  project, which publishes them under the SIL Open Font License 1.1. Confirm this
-  against the font files and VCMI's assets repository before redistributing.
+  project. The font files carry their own notice ("Copyright 2022 The Noto Project
+  Authors ... licensed under the SIL Open Font License, Version 1.1"), and the
+  release archive includes that notice and the license text as
+  `LICENSES/Noto-OFL-1.1.txt`.
 - **FuzzyLite** is a git submodule of VCMI (`AI/FuzzyLite`), statically linked into
   the Nullkiller AI library (`libNullkiller.so`). It is dual-licensed GPL-3.0 and
   proprietary; this project uses it under the GPL-3.0 terms, which is why the
@@ -156,7 +158,9 @@ the device by `scripts/deploy.sh data`.
 When publishing source or a bundle:
 
 1. Include `COPYING`, `LICENSE.txt`, `COPYING.ZLIB` and this document with the
-   corresponding source distribution.
+   corresponding source distribution. `scripts/release.sh` does this for the
+   release zip and also adds each component's license text under `LICENSES/` and a
+   `SOURCES.txt` with the exact source versions and checksums.
 2. Preserve all per-file copyright and license headers in VCMI, SDL and the
    libraries above. The new driver files in `sdl-driver/` do not yet carry
    per-file license headers; add them before publishing.
