@@ -1,0 +1,107 @@
+diff -ruN SDL2-2.32.10.orig/CMakeLists.txt SDL2-2.32.10/CMakeLists.txt
+--- SDL2-2.32.10.orig/CMakeLists.txt	2026-09-20 18:17:59.492996561 -0700
++++ SDL2-2.32.10/CMakeLists.txt	2026-09-20 18:17:59.554009231 -0700
+@@ -489,6 +489,8 @@
+ set_option(SDL_KMSDRM              "Use KMS DRM video driver" ${UNIX_SYS})
+ dep_option(SDL_KMSDRM_SHARED       "Dynamically load KMS DRM support" ON "SDL_KMSDRM" OFF)
+ set_option(SDL_OFFSCREEN           "Use offscreen video driver" ON)
++set_option(SDL_MISTER              "Use MiSTer framebuffer video driver" OFF)
++set_option(SDL_MISTERAUDIO         "Use MiSTer audio driver (/dev/MrAudio)" OFF)
+ option_string(SDL_BACKGROUNDING_SIGNAL "number to use for magic backgrounding signal or 'OFF'" OFF)
+ option_string(SDL_FOREGROUNDING_SIGNAL "number to use for magic foregrounding signal or 'OFF'" OFF)
+ set_option(SDL_HIDAPI              "Enable the HIDAPI subsystem" ON)
+@@ -1213,6 +1215,13 @@
+     set(HAVE_DUMMYAUDIO TRUE)
+     set(HAVE_SDL_AUDIO TRUE)
+   endif()
++  if(SDL_MISTERAUDIO)
++    set(SDL_AUDIO_DRIVER_MISTER 1)
++    file(GLOB MISTERAUDIO_SOURCES ${SDL2_SOURCE_DIR}/src/audio/mister/*.c)
++    list(APPEND SOURCE_FILES ${MISTERAUDIO_SOURCES})
++    set(HAVE_MISTERAUDIO TRUE)
++    set(HAVE_SDL_AUDIO TRUE)
++  endif()
+   if(SDL_DISKAUDIO)
+     set(SDL_AUDIO_DRIVER_DISK 1)
+     file(GLOB DISKAUDIO_SOURCES ${SDL2_SOURCE_DIR}/src/audio/disk/*.c)
+@@ -1255,6 +1264,13 @@
+     set(HAVE_DUMMYVIDEO TRUE)
+     set(HAVE_SDL_VIDEO TRUE)
+   endif()
++  if(SDL_MISTER)
++    set(SDL_VIDEO_DRIVER_MISTER 1)
++    file(GLOB VIDEO_MISTER_SOURCES ${SDL2_SOURCE_DIR}/src/video/mister/*.c)
++    list(APPEND SOURCE_FILES ${VIDEO_MISTER_SOURCES})
++    set(HAVE_MISTER TRUE)
++    set(HAVE_SDL_VIDEO TRUE)
++  endif()
+   if(SDL_OFFSCREEN)
+     set(SDL_VIDEO_DRIVER_OFFSCREEN 1)
+     file(GLOB VIDEO_OFFSCREEN_SOURCES ${SDL2_SOURCE_DIR}/src/video/offscreen/*.c)
+diff -ruN SDL2-2.32.10.orig/include/SDL_config.h.cmake SDL2-2.32.10/include/SDL_config.h.cmake
+--- SDL2-2.32.10.orig/include/SDL_config.h.cmake	2026-09-20 18:17:59.498349719 -0700
++++ SDL2-2.32.10/include/SDL_config.h.cmake	2026-09-20 18:17:59.553819341 -0700
+@@ -299,6 +299,7 @@
+ #cmakedefine SDL_AUDIO_DRIVER_ARTS @SDL_AUDIO_DRIVER_ARTS@
+ #cmakedefine SDL_AUDIO_DRIVER_ARTS_DYNAMIC @SDL_AUDIO_DRIVER_ARTS_DYNAMIC@
+ #cmakedefine SDL_AUDIO_DRIVER_COREAUDIO @SDL_AUDIO_DRIVER_COREAUDIO@
++#cmakedefine SDL_AUDIO_DRIVER_MISTER @SDL_AUDIO_DRIVER_MISTER@
+ #cmakedefine SDL_AUDIO_DRIVER_DISK @SDL_AUDIO_DRIVER_DISK@
+ #cmakedefine SDL_AUDIO_DRIVER_DSOUND @SDL_AUDIO_DRIVER_DSOUND@
+ #cmakedefine SDL_AUDIO_DRIVER_DUMMY @SDL_AUDIO_DRIVER_DUMMY@
+@@ -412,6 +413,7 @@
+ #cmakedefine SDL_VIDEO_DRIVER_DIRECTFB @SDL_VIDEO_DRIVER_DIRECTFB@
+ #cmakedefine SDL_VIDEO_DRIVER_DIRECTFB_DYNAMIC @SDL_VIDEO_DRIVER_DIRECTFB_DYNAMIC@
+ #cmakedefine SDL_VIDEO_DRIVER_DUMMY @SDL_VIDEO_DRIVER_DUMMY@
++#cmakedefine SDL_VIDEO_DRIVER_MISTER @SDL_VIDEO_DRIVER_MISTER@
+ #cmakedefine SDL_VIDEO_DRIVER_OFFSCREEN @SDL_VIDEO_DRIVER_OFFSCREEN@
+ #cmakedefine SDL_VIDEO_DRIVER_WINDOWS @SDL_VIDEO_DRIVER_WINDOWS@
+ #cmakedefine SDL_VIDEO_DRIVER_WINRT @SDL_VIDEO_DRIVER_WINRT@
+diff -ruN SDL2-2.32.10.orig/src/audio/SDL_audio.c SDL2-2.32.10/src/audio/SDL_audio.c
+--- SDL2-2.32.10.orig/src/audio/SDL_audio.c	2026-09-20 18:17:59.499934727 -0700
++++ SDL2-2.32.10/src/audio/SDL_audio.c	2026-09-20 18:17:59.553678107 -0700
+@@ -129,6 +129,9 @@
+ #ifdef SDL_AUDIO_DRIVER_OS2
+     &OS2AUDIO_bootstrap,
+ #endif
++#ifdef SDL_AUDIO_DRIVER_MISTER
++    &MISTERAUDIO_bootstrap,
++#endif
+ #ifdef SDL_AUDIO_DRIVER_DISK
+     &DISKAUDIO_bootstrap,
+ #endif
+diff -ruN SDL2-2.32.10.orig/src/audio/SDL_sysaudio.h SDL2-2.32.10/src/audio/SDL_sysaudio.h
+--- SDL2-2.32.10.orig/src/audio/SDL_sysaudio.h	2026-09-20 18:17:59.500062360 -0700
++++ SDL2-2.32.10/src/audio/SDL_sysaudio.h	2026-09-20 18:17:59.553750848 -0700
+@@ -197,6 +197,7 @@
+ extern AudioBootStrap PAUDIO_bootstrap;
+ extern AudioBootStrap HAIKUAUDIO_bootstrap;
+ extern AudioBootStrap COREAUDIO_bootstrap;
++extern AudioBootStrap MISTERAUDIO_bootstrap;
+ extern AudioBootStrap DISKAUDIO_bootstrap;
+ extern AudioBootStrap DUMMYAUDIO_bootstrap;
+ extern AudioBootStrap FUSIONSOUND_bootstrap;
+diff -ruN SDL2-2.32.10.orig/src/video/SDL_sysvideo.h SDL2-2.32.10/src/video/SDL_sysvideo.h
+--- SDL2-2.32.10.orig/src/video/SDL_sysvideo.h	2026-09-20 18:17:59.509367715 -0700
++++ SDL2-2.32.10/src/video/SDL_sysvideo.h	2026-09-20 18:17:59.533501101 -0700
+@@ -480,6 +480,7 @@
+ extern VideoBootStrap VIVANTE_bootstrap;
+ extern VideoBootStrap Emscripten_bootstrap;
+ extern VideoBootStrap QNX_bootstrap;
++extern VideoBootStrap MISTER_bootstrap;
+ extern VideoBootStrap OFFSCREEN_bootstrap;
+ extern VideoBootStrap NGAGE_bootstrap;
+ extern VideoBootStrap OS2DIVE_bootstrap;
+diff -ruN SDL2-2.32.10.orig/src/video/SDL_video.c SDL2-2.32.10/src/video/SDL_video.c
+--- SDL2-2.32.10.orig/src/video/SDL_video.c	2026-09-20 18:17:59.509379873 -0700
++++ SDL2-2.32.10/src/video/SDL_video.c	2026-09-20 18:17:59.533396833 -0700
+@@ -142,6 +142,9 @@
+ #ifdef SDL_VIDEO_DRIVER_NGAGE
+     &NGAGE_bootstrap,
+ #endif
++#ifdef SDL_VIDEO_DRIVER_MISTER
++    &MISTER_bootstrap,
++#endif
+ #ifdef SDL_VIDEO_DRIVER_OFFSCREEN
+     &OFFSCREEN_bootstrap,
+ #endif

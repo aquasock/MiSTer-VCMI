@@ -1,0 +1,15 @@
+diff --git a/client/CPlayerInterface.cpp b/client/CPlayerInterface.cpp
+index 81f2505..e7a9ac4 100644
+--- a/client/CPlayerInterface.cpp
++++ b/client/CPlayerInterface.cpp
+@@ -1362,6 +1362,10 @@ void CPlayerInterface::objectPropertyChanged(const SetObjectProperty * sop)
+ 
+ void CPlayerInterface::initializeHeroTownList()
+ {
++	// The spectator interface has no player; its callback has an empty player id.
++	if(!playerID.isValidPlayer())
++		return;
++
+ 	if(localState->getWanderingHeroes().empty())
+ 	{
+ 		for(auto & hero : cb->getHeroesInfo())

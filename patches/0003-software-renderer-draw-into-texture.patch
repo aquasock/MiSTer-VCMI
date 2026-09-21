@@ -1,0 +1,72 @@
+diff --git a/client/renderSDL/ScreenHandler.cpp b/client/renderSDL/ScreenHandler.cpp
+index 09819e1..9b74acd 100644
+--- a/client/renderSDL/ScreenHandler.cpp
++++ b/client/renderSDL/ScreenHandler.cpp
+@@ -440,6 +440,30 @@ void ScreenHandler::initializeScreenBuffers()
+ 		throw std::runtime_error("Unable to create screen texture");
+ 	}
+ 
++	// The screen is opaque. An ARGB texture defaults to alpha blending, which would blend the (arbitrary)
++	// alpha of the screen surface against whatever is already in the render target and cost a per-pixel blend.
++	SDL_SetTextureBlendMode(screenTexture, SDL_BLENDMODE_NONE);
++
++	// The software renderer keeps a streaming texture in plain memory, so draw straight into it
++	// and skip the per-frame SDL_UpdateTexture copy (a full-frame memcpy, ~5 ms on slow ARM boards).
++	SDL_RendererInfo rendererInfo;
++	if(SDL_GetRendererInfo(mainRenderer, &rendererInfo) == 0 && std::string(rendererInfo.name) == "software")
++	{
++		void * texturePixels = nullptr;
++		int texturePitch = 0;
++		if(SDL_LockTexture(screenTexture, nullptr, &texturePixels, &texturePitch) == 0)
++		{
++			SDL_UnlockTexture(screenTexture); // for this renderer the memory stays valid
++			SDL_Surface * direct = SDL_CreateRGBSurfaceFrom(texturePixels, logicalSize.x, logicalSize.y, 32, texturePitch, rmask, gmask, bmask, amask);
++			if(direct)
++			{
++				SDL_FreeSurface(screen);
++				screen = direct; // SDL_PREALLOC: this surface aliases the texture
++				SDL_SetSurfaceBlendMode(screen, SDL_BLENDMODE_NONE);
++			}
++		}
++	}
++
+ 	clearScreen();
+ }
+ 
+@@ -663,7 +687,8 @@ void ScreenHandler::updateScreenTexture()
+ {
+ 	if(colorScheme == ColorScheme::NONE)
+ 	{
+-		SDL_UpdateTexture(screenTexture, nullptr, screen->pixels, screen->pitch);
++		if(!(screen->flags & SDL_PREALLOC)) // otherwise the screen surface already is the texture's memory
++			SDL_UpdateTexture(screenTexture, nullptr, screen->pixels, screen->pitch);
+ 		return;
+ 	}
+ 
+@@ -678,8 +703,24 @@ void ScreenHandler::updateScreenTexture()
+ 
+ void ScreenHandler::presentScreenTexture()
+ {
+-	SDL_RenderClear(mainRenderer);
+-	SDL_RenderCopy(mainRenderer, screenTexture, nullptr, nullptr);
++	{
++		// With the screen surface aliasing the texture memory (see setupRenderer), the software renderer reads the
++		// screen here instead of in updateScreenTexture(). Other threads, for example the network thread handling
++		// hero movement, redraw parts of it (minimap, resource bar) while holding the interface mutex, so take the
++		// same mutex or the copy can capture a half-drawn element. The software renderer queues its commands, so
++		// flush before releasing the lock.
++		std::scoped_lock interfaceLock(ENGINE->interfaceMutex);
++
++		// The texture is copied over the whole output when the sizes match; clearing first would only
++		// add a full-frame memset.
++		int outputWidth = 0, outputHeight = 0;
++		SDL_GetRendererOutputSize(mainRenderer, &outputWidth, &outputHeight);
++		if(outputWidth != screen->w || outputHeight != screen->h)
++			SDL_RenderClear(mainRenderer);
++
++		SDL_RenderCopy(mainRenderer, screenTexture, nullptr, nullptr);
++		SDL_RenderFlush(mainRenderer);
++	}
+ 	ENGINE->cursor().render();
+ 	SDL_RenderPresent(mainRenderer);
+ }

@@ -1,0 +1,18 @@
+diff --git a/client/renderSDL/ScalableImage.cpp b/client/renderSDL/ScalableImage.cpp
+index 8eb3b03..c915c6c 100644
+--- a/client/renderSDL/ScalableImage.cpp
++++ b/client/renderSDL/ScalableImage.cpp
+@@ -397,8 +397,12 @@ void ScalableImageInstance::setEffectColor(const ColorRGBA & color)
+ 		image->prepareEffectImage();
+ }
+ 
+-void ScalableImageInstance::playerColored(const PlayerColor & player)
++void ScalableImageInstance::playerColored(const PlayerColor & requested)
+ {
++	// Only the 8 players and neutral have a colored variant (index 1 + num); the spectator
++	// pseudo-player would index out of range, so treat it as "no player color".
++	const PlayerColor player = (requested.isValidPlayer() || requested == PlayerColor::NEUTRAL) ? requested : PlayerColor::CANNOT_DETERMINE;
++
+ 	parameters.player = player;
+ 
+ 	if (parameters.palette)
