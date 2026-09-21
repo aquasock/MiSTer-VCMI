@@ -6,10 +6,7 @@ engine, running on the ARM (HPS) side of a [MiSTer](https://github.com/MiSTer-de
 stock MiSTer system: nothing is installed outside `/media/fat`, and the FPGA only
 shows the picture and plays the sound. This project supplies the missing pieces: a
 cross-build for the MiSTer's old userland, SDL2 video and audio drivers for the
-MiSTer's framebuffer and audio device, and a launcher that fills the screen. It is
-software, not an FPGA core, and sits beside the FPGA projects
-[MiSTer-Raster](https://github.com/aquasock/MiSTer-Raster) and
-[MiSTer-Phosphor](https://github.com/aquasock/MiSTer-Phosphor).
+MiSTer's framebuffer and audio device, and a launcher that fills the screen.
 
 You supply your own copy of the game data. This project does not include it.
 
