@@ -213,7 +213,7 @@ Design and implement option 2: keep a persisted snapshot of the previously compo
 
 ---
 
-## 008 COMMIT Unreleased ??? 2026-09-21T20:31:54-07:00
+## 008 COMMIT Unreleased d2965cf 2026-09-21T20:31:54-07:00
 
 #### Coming From:
 
@@ -239,7 +239,7 @@ Have the user walk around, watching specifically for ghosting or tearing at the 
 
 #### Status:
 
-- [ ] Built
+- [x] Built
 - [ ] Passed
 
 ---
