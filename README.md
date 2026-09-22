@@ -76,9 +76,10 @@ full-frame copy costs about 4 ms of the frame budget.
    `/media/fat/vcmi/data`. For the GOG release, unpack the installer with
    [innoextract](https://constexpr.org/innoextract/) first; `VIDEO.VID` is not
    needed.
-3. On the MiSTer, open the OSD (F12), choose **Scripts**, and run **vcmi**. The screen
-   blinks as the output switches to 800x600, and the game starts. Quit from the
-   game's own menu; the launcher switches your display back.
+3. On the MiSTer, open the OSD (F12), choose **Scripts**, and run **vcmi** (the base
+   game) or **vcmi-hota** (Horn of the Abyss, if installed; see [Mods](#mods)). The
+   screen blinks as the output switches to 800x600, and the game starts. Quit from
+   the game's own menu; the launcher switches your display back.
 
 The zip also holds `INSTALL.txt`, the license texts in `LICENSES/`, and
 `SOURCES.txt` listing the exact source versions and checksums.
@@ -93,8 +94,8 @@ The zip also holds `INSTALL.txt`, the license texts in `LICENSES/`, and
    MISTER_HOST=<your MiSTer's IP> scripts/deploy.sh code
    ```
 
-   This installs the game to `/media/fat/vcmi` and the launcher to
-   `/media/fat/Scripts/vcmi.sh`.
+   This installs the game to `/media/fat/vcmi` and the launchers to
+   `/media/fat/Scripts/vcmi.sh` and `/media/fat/Scripts/vcmi-hota.sh`.
 3. Extract the GOG installer and copy the game data across. The extraction needs
    `innoextract`; the video archive `VIDEO.VID` is skipped because video playback
    is not built.
@@ -106,7 +107,8 @@ The zip also holds `INSTALL.txt`, the license texts in `LICENSES/`, and
 
 4. Launch it from the OSD as above.
 
-To remove it, delete `/media/fat/vcmi` and `/media/fat/Scripts/vcmi.sh`.
+To remove it, delete `/media/fat/vcmi`, `/media/fat/Scripts/vcmi.sh` and
+`/media/fat/Scripts/vcmi-hota.sh`.
 
 ## Configuration
 
@@ -146,12 +148,23 @@ example `export SDL_MISTER_VSYNC=0`:
 
 ## Mods
 
-VCMI's own launcher, which normally installs mods, is not built (see
+VCMI's own launcher, which normally installs and enables mods, is not built (see
 [Current limitations](#current-limitations)). Mods are instead dropped into
-`/media/fat/vcmi/data/Mods` as ordinary folders, each holding a `mod.json`. The
-launcher looks there on every start and enables any mod folder not already known
-to `save/modSettings.json`, keeping whatever is already set there, including a
-mod you disabled by hand.
+`/media/fat/vcmi/data/Mods` as ordinary folders, each holding a `mod.json`, and
+there are two Scripts menu entries instead of one:
+
+- **vcmi** always plays the base game: `data/Mods` is scanned for HotA's files but
+  none are loaded, no matter what is sitting in the folder.
+- **vcmi-hota** plays Horn of the Abyss (see below), plus anything else dropped
+  into `data/Mods` alongside it. If HotA was never fetched, it falls back to the
+  base game.
+
+Each keeps its own set of enabled mods in `save/modSettings.json` (the "vcmi" and
+"hota" presets), so a submod you disabled by hand in one is untouched by the
+other, and switching between the two Scripts entries does not fight over shared
+state. Saves made under one may not load under the other: HotA adds content a
+base-game save does not carry a mod dependency on until it is loaded with HotA
+active.
 
 `tools/fetch-hota.sh` fetches [Horn of the Abyss](https://github.com/vcmi-mods/horn-of-the-abyss)
 (HotA), a fan expansion ported to VCMI, and its `vcmi-extras` dependency, and stages

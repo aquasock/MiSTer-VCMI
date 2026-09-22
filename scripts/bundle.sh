@@ -118,29 +118,41 @@ if r.get("width") != w or r.get("height") != h:
 PY
 }
 
-# Mods are dropped into data/Mods as folders (each with a mod.json) instead of being installed by VCMI's launcher, and VCMI only
-# loads root mods that are in the active preset of save/modSettings.json. So list every mod folder there; entries already in the
-# file, including submod settings, are kept. To turn a mod off, remove its folder.
-enable_mods() {
+# Mods are dropped into data/Mods as folders (each with a mod.json) instead of being installed by VCMI's launcher, and VCMI
+# only loads root mods listed in the active preset of save/modSettings.json. Scripts/vcmi.sh sets VCMI_PRESET=vcmi for a
+# clean base game; Scripts/vcmi-hota.sh sets VCMI_PRESET=hota to also load HotA and whatever else is dropped in data/Mods,
+# falling back to the base game if HotA was never fetched. Per-submod settings inside a preset are never touched here, so
+# a submod you disabled by hand by editing modSettings.json directly (there is no in-client mod manager; that UI lives
+# only in VCMI's separate Launcher app, which this project does not build) stays disabled.
+select_preset() {
 	command -v python3 >/dev/null 2>&1 || return 0
-	python3 - <<'PY'
-import json, os
+	python3 - "${VCMI_PRESET:-vcmi}" <<'PY'
+import json, os, sys
+
 p = "save/modSettings.json"
 mods_dir = "data/Mods"
+wanted = sys.argv[1]
 found = sorted(d.lower() for d in os.listdir(mods_dir) if os.path.isfile(os.path.join(mods_dir, d, "mod.json"))) if os.path.isdir(mods_dir) else []
+have_hota = "hota" in found
+
+if wanted == "hota" and not have_hota:
+    print("vcmi-hota: Horn of the Abyss is not installed (see tools/fetch-hota.sh); starting the base game instead.")
+    wanted = "vcmi"
+
 try:
     cfg = json.load(open(p)) if os.path.exists(p) else {}
 except Exception:
-    raise SystemExit(0)   # unreadable file: leave it alone
-preset = cfg.setdefault("presets", {}).setdefault(cfg.setdefault("activePreset", "default"), {})
-mods = preset.setdefault("mods", ["vcmi", "core"])
-new = [m for m in found if m not in mods]
-if new:
-    mods.extend(new)
-    json.dump(cfg, open(p, "w"), indent="\t")
+    cfg = {}
+presets = cfg.setdefault("presets", {})
+presets.setdefault("vcmi", {})["mods"] = ["vcmi", "core"]
+if have_hota:
+    presets.setdefault("hota", {})["mods"] = ["vcmi", "core"] + [m for m in found if m not in ("vcmi", "core")]
+cfg["activePreset"] = wanted
+json.dump(cfg, open(p, "w"), indent="\t")
+print("vcmi preset: %s" % wanted)
 PY
 }
-enable_mods
+select_preset
 
 switched=0
 restore_mode() {
@@ -177,8 +189,13 @@ chmod +x "$OUT/run.sh"
 mkdir -p "$OUT/Scripts"
 cat > "$OUT/Scripts/vcmi.sh" <<LAUNCH
 #!/bin/bash
-exec $DEVICE_DIR/run.sh "\$@"
+VCMI_PRESET=vcmi exec $DEVICE_DIR/run.sh "\$@"
 LAUNCH
-chmod +x "$OUT/Scripts/vcmi.sh"
+cat > "$OUT/Scripts/vcmi-hota.sh" <<LAUNCH
+#!/bin/bash
+# Horn of the Abyss, if tools/fetch-hota.sh has staged it (see README.md#mods); otherwise this falls back to the base game.
+VCMI_PRESET=hota exec $DEVICE_DIR/run.sh "\$@"
+LAUNCH
+chmod +x "$OUT/Scripts/vcmi.sh" "$OUT/Scripts/vcmi-hota.sh"
 
 du -sh "$OUT"; du -sh "$OUT"/*

@@ -22,4 +22,4 @@ Unlike the tools above, these run on the build PC, not the device.
   a pinned SHA-256 sum and drops submods whose dependencies are not present. Copy the staged directory's contents
   into `/media/fat/vcmi/data/Mods` on the MiSTer, or run `scripts/deploy.sh mods`. Mod files are not committed or
   bundled into releases (HotA is CC BY-SA 4.0 and about 0.5 GB); see [ATTRIBUTIONS.md](../ATTRIBUTIONS.md#mods).
-  The launcher (`run.sh`) enables any mod folder it finds under `data/Mods` on the next start.
+  The **vcmi-hota** Scripts entry loads what's staged here; **vcmi** never does. See [README.md#mods](../README.md#mods).
