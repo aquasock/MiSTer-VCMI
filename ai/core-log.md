@@ -212,3 +212,34 @@ Design and implement option 2: keep a persisted snapshot of the previously compo
 - [x] Passed
 
 ---
+
+## 008 COMMIT Unreleased ??? 2026-09-21T20:31:54-07:00
+
+#### Coming From:
+
+Unreleased c09a006
+
+#### Purpose:
+
+Implement option 2 (the frame-shift design) to address the worst-case movement stutter spikes that `c09a006` left unchanged, per the user's approval.
+
+#### Outcome:
+
+`patches/0005-mapview-fast-pan.patch`, on top of `0004`, adds a `previousFrame` snapshot to `MapViewCache`: on a plain camera pan (nothing else changed), it blits that snapshot shifted by the pan delta in one call, then redraws only the newly exposed edge and whichever tiles `updateTile` actually flagged as changed this frame, reusing `0004`'s run-merging for those. The snapshot is taken right after the terrain-compositing loop, before overlays or a view-transition blend, so a later fast-pan frame shifts terrain only and overlays keep redrawing themselves fresh every frame as before. `canFastPan` is deliberately narrow: it requires no overlay-visibility change, no full-redraw request, no view transition in progress, a valid snapshot whose recorded tile size still matches the current one, a snapshot pixel size matching the current viewport, and a shift smaller than the viewport. Two correctness bugs were found and fixed during design, not left for hardware testing to catch: first, `MapViewCache::update()` (called every frame before `render()`) overwrites `cachedSize` with the *current* tile size before `render()` can compare it, so `cachedSize` cannot detect a zoom change the way `cachedPosition` detects a pan; a new `previousFrameTileSize`, set only when the snapshot itself is taken, is used instead. Second, a same-surface self-blit (shifting `target` onto itself) is not guaranteed safe by SDL2 for overlapping regions, so the snapshot is a genuinely separate `Canvas`/`SDL_Surface`, never blitted into itself. A third, unrelated issue surfaced only when actually building: `scripts/build-vcmi.sh`'s `apply_patches` used a per-patch reverse-apply check to decide what still needed applying, which breaks once two patches (`0004` and `0005`) touch overlapping lines of the same function, since after both are applied the earlier patch's hunk context has been further changed by the later one and its reverse-check can fail; `apply_patches` now resets the source tree to the pristine clone and reapplies every patch in order every time, which is simple, cheap at this patch count, and correct regardless of how patches overlap. Verified compiling cleanly, applying cleanly in the full five-patch sequence from a pristine checkout, idempotent on a second `build-vcmi.sh build` run (the exact scenario that exposed the `apply_patches` bug), and a clean `vcmiserver --dummy-run` regression pass on the PC. Deployed to the user's MiSTer; no game was running at deploy time. Not yet visually validated on hardware: this is a genuine rendering-logic change, not a provably-identical transformation like `0004`, so it needs real testing, specifically including a zoom (mouse wheel) while panning, which exercises a guard that PC-side testing cannot reach.
+
+#### Next Steps:
+
+Have the user walk around, watching specifically for ghosting or tearing at the screen edges during panning, any stale content when panning resumes after being idle, and any corruption when zooming while moving. If clean, capture a before/after `SDL_MISTER_STATS` comparison focused on the worst-case gap figures (the 500 to 900 ms spikes `0004` left unchanged), since that is what this change is meant to fix and the earlier two rounds did not touch.
+
+#### Files Modified:
+
+- patches/0005-mapview-fast-pan.patch
+- scripts/build-vcmi.sh
+- ATTRIBUTIONS.md
+
+#### Status:
+
+- [ ] Built
+- [ ] Passed
+
+---
