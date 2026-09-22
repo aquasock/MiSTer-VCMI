@@ -121,4 +121,31 @@ Have the user run **vcmi** and **vcmi-hota** from the OSD to confirm the base ga
 
 ---
 
+## 005 COMMIT Unreleased c300672 2026-09-21T19:28:58-07:00
+
+#### Coming From:
+
+Unreleased c300672
+
+#### Purpose:
+
+Record hardware validation of the `vcmi`/`vcmi-hota` launcher split from `c300672`.
+
+#### Outcome:
+
+The user reported "it works great, the build passes" after running both Scripts entries on hardware: a blanket pass with no numeric or per-script detail volunteered, so this only confirms that `vcmi` and `vcmi-hota` both work as intended, not that the "expected to reproduce" content claim in entry 004 was checked in detail.
+
+#### Next Steps:
+
+Obtain the next objective from the user. Hardware-validated HotA support, now split into its own launcher entry, remains a release candidate under the Versioning section of core.md; `CHANGELOG.md` is still missing and still needed before any tag.
+
+#### Files Modified:
+
+None.
+
+#### Status:
+
+- [x] Built
+- [x] Passed
+
 ---
