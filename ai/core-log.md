@@ -26,3 +26,35 @@ None.
 - [ ] Passed
 
 ---
+
+## 002 COMMIT Unreleased ??? 2026-09-21T17:44:08-07:00
+
+#### Coming From:
+
+Unreleased c7fffbe
+
+#### Purpose:
+
+Get the Horn of the Abyss (HotA) mod loading and playable on the MiSTer by dropping its files into a mods directory, with no VCMI launcher involved.
+
+#### Outcome:
+
+Proposed and approved by the user on 2026-09-21; no work is done yet. The user reports that release `v0.1.0` passes on their hardware, while `e098077` remains untested by the user's decision and is not part of what they run. Research so far found that the HotA port on the `vcmi-1.7` branch of `vcmi-mods/horn-of-the-abyss` is version 1.8.005 with a minimum VCMI version of 1.7.3, so it fits the pinned VCMI 1.7.5, and that it is licensed CC BY-SA 4.0. A summary of its manifest states that no original HotA game files are required, but that is unconfirmed and is verified in the first step. The `ModManager` source in `work/vcmi-src` at `lib/modding/ModManager.cpp` enables any mod that has no entry in `config/modSettings.json` unless its `mod.json` sets `keepDisabled`, so placing the mod folder under `data/Mods` should activate it without the launcher; this has not been run.
+
+#### Next Steps:
+
+First fetch the HotA release matching VCMI 1.7.5 on the PC and record its size, dependencies, submod list, `keepDisabled` submods and directory layout, and confirm whether original HotA files are needed. Second add a deterministic script under `tools` that fetches HotA at a pinned tag, verifies a checksum and lays out a drop-in `Mods` folder; the mod files are neither committed nor bundled into releases because of size and licence. Third the user copies the folder to `/media/fat/vcmi/data/Mods` and tests on hardware, recording load time, resident memory against the roughly 492 MiB available, the VCMI error log and the mod list in the client. Fourth the user plays a scenario using the Cove or Factory town and checks computer-player turn times against the current 4 to 8 seconds, frame rates, and save, load and clean exit. Last fix whatever the test exposes, then document mod installation in the README and install text and record the HotA attribution. If any step shows a finding that changes this plan, work stops until the user approves a revised plan.
+
+#### Files Modified:
+
+- tools/fetch-hota.sh
+- tools/README.md
+- README.md
+- ATTRIBUTIONS.md
+
+#### Status:
+
+- [ ] Built
+- [ ] Passed
+
+---
