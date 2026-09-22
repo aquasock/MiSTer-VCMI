@@ -301,3 +301,32 @@ None.
 - [x] Passed
 
 ---
+
+## 011 COMMIT Unreleased e098077 2026-09-21T20:46:06-07:00
+
+#### Coming From:
+
+Unreleased e098077
+
+#### Purpose:
+
+Record the user's judgment on the turn-processing stall raised in entry 009's Next Steps, without a dedicated investigation.
+
+#### Outcome:
+
+Asked whether to investigate the multi-second, mostly-blocked-not-computing gaps observed around ending a turn in earlier stats captures. The user reports the turn takes a normal amount of time from their own observations, matching the AI thinking time the project's README has documented since before this engagement began (about 4 to 8 seconds for three AIs early in a game). No dedicated investigation was done; this closes the item on the user's own assessment rather than on measured evidence.
+
+#### Next Steps:
+
+Obtain the next objective from the user. The remaining standing items are the missing `CHANGELOG.md` and the accumulated release candidate (HotA support plus the NEON, batched-blit and fast-pan performance fixes) waiting on a version decision.
+
+#### Files Modified:
+
+None.
+
+#### Status:
+
+- [x] Built
+- [x] Passed
+
+---
