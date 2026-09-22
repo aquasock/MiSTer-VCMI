@@ -15,11 +15,16 @@ fetch_vcmi() {
 		https://github.com/vcmi/vcmi.git "$SRC_DIR"
 }
 
-# Local fixes live in patches/; apply any that are not already in the tree.
+# Local fixes live in patches/; reset to the pristine clone and reapply all of them in order, every time.
+# (Applying only the ones not yet present, via a per-patch reverse-check, breaks once two patches touch
+# overlapping lines of the same function: after both are applied, the earlier patch's hunk context has been
+# further changed by the later one, so the reverse-check for it can fail and apply_patches tries to apply it
+# forward again against an already-patched tree. A full reset-and-reapply is simple and cheap enough
+# (a handful of small patches) that there is no reason to keep the fragile per-patch shortcut.)
 apply_patches() {
+	git -C "$SRC_DIR" checkout -- .
 	for p in "$ROOT"/patches/*.patch; do
 		[ -e "$p" ] || continue
-		if git -C "$SRC_DIR" apply --reverse --check "$p" 2>/dev/null; then continue; fi
 		git -C "$SRC_DIR" apply "$p"
 	done
 }

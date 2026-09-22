@@ -77,6 +77,12 @@ GPL-2.0-or-later license. They are applied by `scripts/build-vcmi.sh`.
   merges runs of adjacent tiles that are contiguous in both the tile cache and
   the screen into one blit instead of one call per tile, cutting the per-frame
   call count on this hardware without changing which pixels get drawn.
+- `0005-mapview-fast-pan.patch` — on top of 0004, a plain camera pan (nothing
+  else changed) now reuses the previous frame's composited image, shifted by
+  the pan delta in one blit, redrawing only the newly exposed edge and
+  whichever tiles actually changed content, instead of recompositing the
+  whole viewport every frame. Falls back to the prior full-redraw behavior on
+  a zoom, a view transition, or a camera jump larger than one screen.
 
 ## Mods
 

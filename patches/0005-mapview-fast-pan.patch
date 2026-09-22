@@ -1,0 +1,124 @@
+diff --git a/client/mapView/MapViewCache.cpp b/client/mapView/MapViewCache.cpp
+index 63f0e5d..6ab1e18 100644
+--- a/client/mapView/MapViewCache.cpp
++++ b/client/mapView/MapViewCache.cpp
+@@ -142,18 +142,58 @@ void MapViewCache::render(const std::shared_ptr<IMapRendererContext> & context,
+ 	bool mapMoved = (cachedPosition != model->getMapViewCenter());
+ 	bool overlayVisible = context->showImageOverlay() || context->showTextOverlay();
+ 	bool overlayVisibilityChanged = overlayVisible != overlayWasVisible;
+-	bool lazyUpdate = !overlayVisibilityChanged && !mapMoved && !fullRedraw && vstd::isAlmostZero(context->viewTransitionProgress());
++	bool inTransition = !vstd::isAlmostZero(context->viewTransitionProgress());
++	bool lazyUpdate = !overlayVisibilityChanged && !mapMoved && !fullRedraw && !inTransition;
++
++	Point viewportSize = model->getPixelsVisibleDimensions();
++	Point shift = cachedPosition - model->getMapViewCenter();
++	int absShiftX = shift.x < 0 ? -shift.x : shift.x;
++	int absShiftY = shift.y < 0 ? -shift.y : shift.y;
++
++	// A plain camera pan (nothing else changed) can reuse last frame's image instead of recompositing the whole
++	// viewport tile by tile: shift it by the pan delta, then only the newly exposed edge and whichever tiles
++	// actually changed content (the same tracking updateTile already keeps) need a fresh draw. Guarded narrowly:
++	// no overlay/transition/full-redraw, previousFrame must exist and match the current viewport pixel size (it
++	// won't on the first frame, or after a resize) and tile size (a zoom in progress changes tile size every
++	// frame, exactly like a pan, and reusing a different zoom level's image would be visibly wrong), and the pan
++	// itself must be smaller than the viewport (a teleport/instant jump has nothing useful to reuse).
++	bool canFastPan = mapMoved && !overlayVisibilityChanged && !fullRedraw && !inTransition &&
++		previousFrameValid && previousFrameTileSize == model->getSingleTileSize() &&
++		previousFrame->getRenderArea().dimensions() == target.getRenderArea().dimensions() &&
++		absShiftX < viewportSize.x && absShiftY < viewportSize.y;
++
++	if (canFastPan)
++		target.draw(*previousFrame, shift);
+ 
+ 	Rect dimensions = model->getTilesTotalRect();
+ 
+-	// The cache wraps every wrapAt columns/rows (a tile's cache slot is reused as the view scrolls), so a run of
++	// The cache wraps every wrapX columns/rows (a tile's cache slot is reused as the view scrolls), so a run of
+ 	// tiles that all need drawing is contiguous in both cache space and target space only until that wrap point.
+-	// Blitting such a run in one call instead of one call per tile matters here: while panning, lazyUpdate is off
+-	// and every visible tile (several hundred) needs drawing every frame, and each SDL blit call has enough fixed
+-	// overhead on this hardware that merging adjacent ones into fewer, wider blits is a large, visually identical
+-	// win. This changes call count only: the merged blit copies exactly the pixels the per-tile blits would have.
++	// Blitting such a run in one call instead of one call per tile matters here: on the fast-pan path above, or
++	// while panning without it, several hundred tiles can need drawing in a frame, and each SDL blit call has
++	// enough fixed overhead on this hardware that merging adjacent ones into fewer, wider blits is a large,
++	// visually identical win. This changes call count only: the merged blit copies exactly the pixels the
++	// per-tile blits would have.
+ 	int wrapX = static_cast<int>(terrainChecksum.shape()[0]);
+ 
++	// Whether the tile at map coordinate (atX, atY) needs a fresh draw this frame. On the fast-pan path, a tile
++	// is exposed (has no valid shifted content to reuse) if any part of where it would read from in
++	// previousFrame falls outside previousFrame's bounds.
++	auto needsRedraw = [&](int atX, int atY, int atCacheX, int atCacheY) -> bool
++	{
++		if (canFastPan)
++		{
++			Rect targetRect = model->getTargetTileArea(int3(atX, atY, model->getLevel()));
++			Point sourceTopLeft = targetRect.topLeft() - shift;
++			bool exposed = sourceTopLeft.x < 0 || sourceTopLeft.y < 0 ||
++				sourceTopLeft.x + targetRect.w > viewportSize.x || sourceTopLeft.y + targetRect.h > viewportSize.y;
++			return exposed || !tilesUpToDate[atCacheX][atCacheY];
++		}
++		if (lazyUpdate)
++			return !tilesUpToDate[atCacheX][atCacheY];
++		return true;
++	};
++
+ 	for(int y = dimensions.top(); y < dimensions.bottom(); ++y)
+ 	{
+ 		int cacheY = (terrainChecksum.shape()[1] + y) % terrainChecksum.shape()[1];
+@@ -162,7 +202,7 @@ void MapViewCache::render(const std::shared_ptr<IMapRendererContext> & context,
+ 		{
+ 			int cacheX = (wrapX + x) % wrapX;
+ 
+-			if(lazyUpdate && tilesUpToDate[cacheX][cacheY])
++			if(!needsRedraw(x, y, cacheX, cacheY))
+ 			{
+ 				++x;
+ 				continue;
+@@ -170,7 +210,7 @@ void MapViewCache::render(const std::shared_ptr<IMapRendererContext> & context,
+ 
+ 			int runLength = 1;
+ 			while(x + runLength < dimensions.right() && cacheX + runLength < wrapX &&
+-				(!lazyUpdate || !tilesUpToDate[cacheX + runLength][cacheY]))
++				needsRedraw(x + runLength, y, cacheX + runLength, cacheY))
+ 			{
+ 				++runLength;
+ 			}
+@@ -192,6 +232,19 @@ void MapViewCache::render(const std::shared_ptr<IMapRendererContext> & context,
+ 		}
+ 	}
+ 
++	// Snapshot this frame's terrain layer, before overlays or a transition blend are drawn onto it below, so a
++	// later fast-pan frame shifts terrain only; overlays and the transition blend already redraw themselves
++	// fresh every frame regardless. Skipped mid-transition: that content isn't representative of steady-state
++	// panning and isn't worth reusing.
++	if (!inTransition)
++	{
++		if (!previousFrame || previousFrame->getRenderArea().dimensions() != target.getRenderArea().dimensions())
++			previousFrame = std::make_unique<Canvas>(viewportSize, CanvasScalingPolicy::AUTO);
++		previousFrame->draw(target, Point(0, 0));
++		previousFrameTileSize = model->getSingleTileSize();
++		previousFrameValid = true;
++	}
++
+ 	if(context->showImageOverlay())
+ 	{
+ 		for(int y = dimensions.top(); y < dimensions.bottom(); ++y)
+diff --git a/client/mapView/MapViewCache.h b/client/mapView/MapViewCache.h
+index ad2ba2a..63d42e3 100644
+--- a/client/mapView/MapViewCache.h
++++ b/client/mapView/MapViewCache.h
+@@ -46,6 +46,12 @@ class MapViewCache
+ 	int cachedLevel;
+ 	bool overlayWasVisible;
+ 
++	/// snapshot of the previous frame's terrain layer, reused (shifted by the pan delta) instead of
++	/// recompositing the whole viewport tile by tile when a frame turns out to be a plain camera pan
++	std::unique_ptr<Canvas> previousFrame;
++	Point previousFrameTileSize;
++	bool previousFrameValid = false;
++
+ 	std::shared_ptr<MapViewModel> model;
+ 
+ 	std::unique_ptr<Canvas> terrain;
