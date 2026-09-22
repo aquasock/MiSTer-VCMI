@@ -365,3 +365,61 @@ Have the user run **vcmi-wog** from the OSD and check for visual glitches, confi
 - [ ] Passed
 
 ---
+
+## 013 COMMIT Unreleased f85d835 2026-09-21T21:16:18-07:00
+
+#### Coming From:
+
+Unreleased f85d835
+
+#### Purpose:
+
+Record hardware validation of WoG support (`f85d835`): all three Scripts entries (`vcmi`, `vcmi-hota`, `vcmi-wog`).
+
+#### Outcome:
+
+The user reported all three Scripts entries work correctly, including no visual glitches and no cross-loading between the two mods, confirming the `select_preset` generalization and the two bugs caught and fixed during development did not leave anything for hardware to catch. The user also reported a separate, pre-existing bug while testing: after quitting from any of the three entries, the OSD's "press ENTER to continue" prompt does not appear, showing a black screen instead; pressing Enter still works and returns to the main menu, so this is a display-only issue, not a functional one, and the user says it has been present since the project's beginning.
+
+#### Next Steps:
+
+The black-screen bug is investigated and a fix proposed in the entry immediately following this one.
+
+#### Files Modified:
+
+None.
+
+#### Status:
+
+- [x] Built
+- [x] Passed
+
+---
+
+## 014 COMMIT Unreleased ??? 2026-09-21T21:16:18-07:00
+
+#### Coming From:
+
+Unreleased f85d835
+
+#### Purpose:
+
+Fix the black screen where the OSD's "press ENTER to continue" prompt should appear after quitting, reported in entry 013.
+
+#### Outcome:
+
+The sibling MiSTer-GemRB project shares this project's `sdl-driver/mister/SDL_mistervideo.c` and has already solved exactly this problem, with a comment explaining the mechanism: the driver switches the console (the tty the OSD script runs on) into `KD_GRAPHICS` mode so it has exclusive framebuffer access, and switches it back in `MISTER_VTLeave`, called from SDL's `MISTER_VideoQuit`; but that callback only runs on a clean SDL video-subsystem shutdown, so any exit path that does not reach it (confirmed in this project's own source: `MISTER_VTLeave` is called only from `MISTER_VideoQuit`) leaves the console stuck in graphics mode, and the OSD's own text, written by something outside our process once the script exits, is never rendered by the kernel console driver, appearing as a black screen; input still works because that is unrelated to display mode, matching what the user observed. GemRB's launcher script defensively forces the console back to text mode with a raw `KDSETMODE` ioctl (`0x4B3A`, `KD_TEXT` = `0`) both before launching, in case a previous run left it broken, and after the game exits, regardless of exit code, rather than relying on the game's own shutdown path. The identical two-line fix was ported into the `run.sh` template in `scripts/bundle.sh`. Verified the shell and embedded logic are syntactically valid, and that the ioctl call fails harmlessly off a real virtual terminal (expected on the PC, where stdin is not a tty0-family device) rather than aborting the script. Deployed directly to the user's MiSTer; not yet tested, since real validation needs a quit sequence on an actual console.
+
+#### Next Steps:
+
+Have the user quit the game from any of the three Scripts entries and confirm the "press ENTER to continue" prompt is now visible instead of a black screen.
+
+#### Files Modified:
+
+- scripts/bundle.sh
+
+#### Status:
+
+- [ ] Built
+- [ ] Passed
+
+---
