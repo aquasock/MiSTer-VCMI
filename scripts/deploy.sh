@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copies the bundle (and, once, the game data) to the MiSTer over ssh.
 # Usage: scripts/deploy.sh [code|data|mods|tools|all]   (default: code)
-#   mods copies the mods staged by tools/fetch-hota.sh into data/Mods; code leaves any other mods in data/Mods alone.
+#   mods copies the mods staged by tools/fetch-*.sh into data/Mods; code leaves any other mods in data/Mods alone.
 #   MISTER_HOST (default 10.10.0.22), DEVICE_DIR (default /media/fat/vcmi), H3_DATA (extracted GOG dir)
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/env.sh"
@@ -31,8 +31,8 @@ data() {
 }
 
 mods() {
-	[ -d "$WORK/hota-mods/Mods" ] || { echo "run tools/fetch-hota.sh first" >&2; exit 1; }
-	tar -C "$WORK/hota-mods/Mods" -cf - . | "${SSH[@]}" "mkdir -p $DEVICE_DIR/data/Mods && tar --no-same-owner -C $DEVICE_DIR/data/Mods -xf -"
+	[ -d "$WORK/mods/Mods" ] || { echo "run tools/fetch-hota.sh and/or tools/fetch-wog.sh first" >&2; exit 1; }
+	tar -C "$WORK/mods/Mods" -cf - . | "${SSH[@]}" "mkdir -p $DEVICE_DIR/data/Mods && tar --no-same-owner -C $DEVICE_DIR/data/Mods -xf -"
 }
 
 # The on-device test tools live in /tmp, which a reboot wipes.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fetches the Horn of the Abyss (HotA) mod for VCMI 1.7 and stages it as a drop-in mods directory, without the VCMI launcher.
 # Usage: tools/fetch-hota.sh
-#   Output: work/hota-mods/Mods/{hota,vcmi-extras}. Copy the contents of that Mods directory into /media/fat/vcmi/data/Mods
+#   Output: work/mods/Mods/{hota,vcmi-extras}. Copy the contents of that Mods directory into /media/fat/vcmi/data/Mods
 #   on the MiSTer (or run `scripts/deploy.sh mods`). Nothing is committed or bundled: HotA is CC BY-SA 4.0 and about 0.5 GB.
 # The downloads come from the official VCMI mod repository listing (vcmi-mods-repository, vcmi-1.7.json) and are checked against
 # the SHA-256 sums below; if upstream re-releases a mod the check fails, so update the pins after looking at the new release.
@@ -15,7 +15,7 @@ HOTA_SHA256=e70e6d9fc3ef9541caeda9353d93ea54d47ebb34ae1d403fec37f1dc7522afd2
 EXTRAS_URL=https://github.com/vcmi-mods/vcmi-extras/releases/download/1.7/vcmi-extras-vcmi-1.7.zip
 EXTRAS_SHA256=c6b253395d0dad3e3eb81aa2a070619ba266a4283096d98b2b962f07119a5c22
 
-OUT="$WORK/hota-mods"
+OUT="$WORK/mods"
 STAGE="$WORK/hota-stage"
 
 fetch() {	# url sha256 -> $DL/<file>
@@ -42,14 +42,15 @@ install_mod() {	# zip id -> $OUT/Mods/<id>
 fetch "$HOTA_URL" "$HOTA_SHA256"
 fetch "$EXTRAS_URL" "$EXTRAS_SHA256"
 
-rm -rf "$OUT"
+# $OUT/Mods is shared with tools/fetch-wog.sh and any future tools/fetch-*.sh, so only ever touch our own
+# subfolders here, never the whole directory.
 install_mod "$DL/$(basename "$HOTA_URL")" hota
 install_mod "$DL/$(basename "$EXTRAS_URL")" vcmi-extras
 
-python3 - "$OUT/Mods" <<'PY'
+python3 - "$OUT/Mods" hota vcmi-extras <<'PY'
 import json, os, re, shutil, sys
 
-root = sys.argv[1]
+root, ours = sys.argv[1], set(sys.argv[2:])
 
 def load(path):
     text = open(path, encoding='utf-8-sig').read()
@@ -59,34 +60,37 @@ def load(path):
         return json.loads(re.sub(r',(\s*[}\]])', r'\1', text))
 
 # Mod id = the folder names below the top mod, joined by dots, lower case; the "mods" folders are not part of it.
+# Every mod folder currently staged (ours and any other tool's) counts as "available" for dependency checks, but
+# only ours are ever removed: a shared directory must not have one fetch script prune another's mods.
 mods = {}
 for top in sorted(os.listdir(root)):
     for dirpath, _, files in os.walk(os.path.join(root, top)):
         if 'mod.json' not in files:
             continue
         parts = [top] + [p for p in os.path.relpath(dirpath, os.path.join(root, top)).split(os.sep) if p not in ('.', 'mods', 'Mods')]
-        mods['.'.join(parts).lower()] = (dirpath, [d.lower() for d in load(os.path.join(dirpath, 'mod.json')).get('depends', [])])
+        mods['.'.join(parts).lower()] = (top, dirpath, [d.lower() for d in load(os.path.join(dirpath, 'mod.json')).get('depends', [])])
 
 removed = []
 changed = True
 while changed:
     changed = False
-    for mod_id, (path, depends) in list(mods.items()):
-        if mod_id not in mods:      # already removed together with its parent folder
+    for mod_id, (top, path, depends) in list(mods.items()):
+        if mod_id not in mods or top not in ours:
             continue
         if any(d != 'vcmi' and not d.startswith('vcmi.') and d not in mods for d in depends):
             shutil.rmtree(path)
-            for other_id, (other_path, _) in list(mods.items()):
+            for other_id, (other_top, other_path, _) in list(mods.items()):
                 if other_path == path or other_path.startswith(path + os.sep):
                     del mods[other_id]
                     removed.append(other_id)
             changed = True
 
-print('kept %d mods, removed %d with unmet dependencies:' % (len(mods), len(removed)))
+kept = sum(1 for top, _, _ in mods.values() if top in ours)
+print('kept %d mods, removed %d with unmet dependencies:' % (kept, len(removed)))
 for mod_id in removed:
     print('  ' + mod_id)
 PY
 
 echo
-du -sh "$OUT/Mods"/* | sed 's|	.*/hota-mods/|	|'
+du -sh "$OUT/Mods/hota" "$OUT/Mods/vcmi-extras" | sed 's|	.*/mods/|	|'
 echo "Staged in $OUT/Mods. Copy its contents to /media/fat/vcmi/data/Mods on the MiSTer, or run scripts/deploy.sh mods."

@@ -118,12 +118,12 @@ if r.get("width") != w or r.get("height") != h:
 PY
 }
 
-# Mods are dropped into data/Mods as folders (each with a mod.json) instead of being installed by VCMI's launcher, and VCMI
-# only loads root mods listed in the active preset of save/modSettings.json. Scripts/vcmi.sh sets VCMI_PRESET=vcmi for a
-# clean base game; Scripts/vcmi-hota.sh sets VCMI_PRESET=hota to also load HotA and whatever else is dropped in data/Mods,
-# falling back to the base game if HotA was never fetched. Per-submod settings inside a preset are never touched here, so
-# a submod you disabled by hand by editing modSettings.json directly (there is no in-client mod manager; that UI lives
-# only in VCMI's separate Launcher app, which this project does not build) stays disabled.
+# Mods are dropped into data/Mods as folders (each with a mod.json) instead of being installed by VCMI's launcher, and
+# VCMI only loads root mods listed in the active preset of save/modSettings.json. Scripts/vcmi.sh sets VCMI_PRESET=vcmi
+# for a clean base game; each other Scripts/vcmi-<name>.sh sets VCMI_PRESET=<name> for one mod, falling back to the base
+# game if that mod was never fetched. Per-submod settings inside a preset are never touched here, so a submod you
+# disabled by hand by editing modSettings.json directly (there is no in-client mod manager; that UI lives only in
+# VCMI's separate Launcher app, which this project does not build) stays disabled.
 select_preset() {
 	command -v python3 >/dev/null 2>&1 || return 0
 	python3 - "${VCMI_PRESET:-vcmi}" <<'PY'
@@ -133,20 +133,33 @@ p = "save/modSettings.json"
 mods_dir = "data/Mods"
 wanted = sys.argv[1]
 found = sorted(d.lower() for d in os.listdir(mods_dir) if os.path.isfile(os.path.join(mods_dir, d, "mod.json"))) if os.path.isdir(mods_dir) else []
-have_hota = "hota" in found
 
-if wanted == "hota" and not have_hota:
-    print("vcmi-hota: Horn of the Abyss is not installed (see tools/fetch-hota.sh); starting the base game instead.")
-    wanted = "vcmi"
+# Each preset other than "vcmi" (the base game) is one mod, named for its own Scripts/vcmi-<name>.sh: the launcher
+# name is not always the mod's own folder name (VCMI derives a mod's id from its folder name, and some mods, like
+# WoG, cross-reference their own submods by their upstream folder name, so tools/fetch-wog.sh cannot shorten it the
+# way tools/fetch-hota.sh's folder already happens to match). "extra" lists sibling mod folders the preset needs
+# that aren't part of the mod's own folder, e.g. HotA's dependency on vcmi-extras; only included if actually present.
+PRESETS = {
+	"hota": {"root": "hota", "extra": ["vcmi-extras"]},
+	"wog": {"root": "wake-of-gods", "extra": []},
+}
+
+if wanted != "vcmi" and wanted not in PRESETS:
+	wanted = "vcmi"
+elif wanted != "vcmi" and PRESETS[wanted]["root"] not in found:
+	print("vcmi-%s: mod not installed (see tools/fetch-%s.sh); starting the base game instead." % (wanted, wanted))
+	wanted = "vcmi"
 
 try:
-    cfg = json.load(open(p)) if os.path.exists(p) else {}
+	cfg = json.load(open(p)) if os.path.exists(p) else {}
 except Exception:
-    cfg = {}
+	cfg = {}
 presets = cfg.setdefault("presets", {})
 presets.setdefault("vcmi", {})["mods"] = ["vcmi", "core"]
-if have_hota:
-    presets.setdefault("hota", {})["mods"] = ["vcmi", "core"] + [m for m in found if m not in ("vcmi", "core")]
+for name, info in PRESETS.items():
+	if info["root"] in found:
+		extra = [m for m in info["extra"] if m in found]
+		presets.setdefault(name, {})["mods"] = ["vcmi", "core", info["root"]] + extra
 cfg["activePreset"] = wanted
 json.dump(cfg, open(p, "w"), indent="\t")
 print("vcmi preset: %s" % wanted)
@@ -196,6 +209,11 @@ cat > "$OUT/Scripts/vcmi-hota.sh" <<LAUNCH
 # Horn of the Abyss, if tools/fetch-hota.sh has staged it (see README.md#mods); otherwise this falls back to the base game.
 VCMI_PRESET=hota exec $DEVICE_DIR/run.sh "\$@"
 LAUNCH
-chmod +x "$OUT/Scripts/vcmi.sh" "$OUT/Scripts/vcmi-hota.sh"
+cat > "$OUT/Scripts/vcmi-wog.sh" <<LAUNCH
+#!/bin/bash
+# In The Wake of Gods, if tools/fetch-wog.sh has staged it (see README.md#mods); otherwise this falls back to the base game.
+VCMI_PRESET=wog exec $DEVICE_DIR/run.sh "\$@"
+LAUNCH
+chmod +x "$OUT/Scripts/vcmi.sh" "$OUT/Scripts/vcmi-hota.sh" "$OUT/Scripts/vcmi-wog.sh"
 
 du -sh "$OUT"; du -sh "$OUT"/*

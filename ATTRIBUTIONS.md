@@ -86,9 +86,10 @@ GPL-2.0-or-later license. They are applied by `scripts/build-vcmi.sh`.
 
 ## Mods
 
-Not part of the project or the release bundle. `tools/fetch-hota.sh` downloads
-these at the user's request and stages them under `work/hota-mods/`, which is not
-tracked; see [tools/README.md](tools/README.md#pc-side-helper-scripts).
+Not part of the project or the release bundle. `tools/fetch-hota.sh` and
+`tools/fetch-wog.sh` download these at the user's request and stage them under
+`work/mods/`, which is not tracked; see
+[tools/README.md](tools/README.md#pc-side-helper-scripts).
 
 - **Horn of the Abyss** (HotA), release `1.7` of the `vcmi-mods/horn-of-the-abyss`
   port, version 1.8.005. Licensed CC-BY-SA 4.0. Authors: VCMI Team, edeksumo,
@@ -98,12 +99,21 @@ tracked; see [tools/README.md](tools/README.md#pc-side-helper-scripts).
   VCMI Team. Fetched because a HotA submod (`hota.cove.covecampaignheroesinmaps`
   and others) depends on it. Its `mod.json` and GitHub repository do not declare a
   license.
+- **In The Wake of Gods** (WoG), release `1.7` of `vcmi-mods/wake-of-gods`, version
+  9.1.82, by the WoG Team & epigones. Its `mod.json` and GitHub repository do not
+  declare a license. Staged under its upstream folder name (`wake-of-gods`, not
+  shortened): its own submods cross-reference each other by that name, and VCMI
+  derives a mod's id from its folder name, so shortening it would break those
+  internal dependencies; `scripts/bundle.sh` maps the shorter `vcmi-wog` Scripts
+  entry to this folder. Needs no sibling mod; a `mithril` submod has optional
+  compatibility hooks for other terrain mods (including HotA's) that are simply
+  skipped when those mods are not also staged.
+  Source: <https://github.com/vcmi-mods/wake-of-gods>.
 
-Both are fetched from the official VCMI mod repository listing
+All are fetched from the official VCMI mod repository listing
 (`vcmi/vcmi-mods-repository`, `vcmi-1.7.json`) and checked against a pinned
-SHA-256 sum. Redistributing either mod's files is subject to their own license
-terms above, separate from this project's GPL-2.0-or-later/GPL-3.0-or-later
-baseline.
+SHA-256 sum. Redistributing any mod's files is subject to its own license terms
+above, separate from this project's GPL-2.0-or-later/GPL-3.0-or-later baseline.
 
 ## SDL and its extension libraries
 

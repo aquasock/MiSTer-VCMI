@@ -17,9 +17,12 @@ start `vin.py` first, then write commands such as `goto 640 187` and `click` to 
 
 Unlike the tools above, these run on the build PC, not the device.
 
-- `fetch-hota.sh` downloads the Horn of the Abyss (HotA) mod and its `vcmi-extras` dependency and stages them as a
-  drop-in `Mods` directory at `work/hota-mods/Mods`, with no VCMI launcher involved. It checks each download against
-  a pinned SHA-256 sum and drops submods whose dependencies are not present. Copy the staged directory's contents
+- `fetch-hota.sh` and `fetch-wog.sh` each download one mod (HotA also fetches its `vcmi-extras` dependency) and
+  stage it as a drop-in `Mods` directory at `work/mods/Mods`, shared between them, with no VCMI launcher involved.
+  Each checks its download against a pinned SHA-256 sum and drops submods whose dependencies are not present,
+  touching only the mod it just fetched even though the directory is shared. Copy the staged directory's contents
   into `/media/fat/vcmi/data/Mods` on the MiSTer, or run `scripts/deploy.sh mods`. Mod files are not committed or
-  bundled into releases (HotA is CC BY-SA 4.0 and about 0.5 GB); see [ATTRIBUTIONS.md](../ATTRIBUTIONS.md#mods).
-  The **vcmi-hota** Scripts entry loads what's staged here; **vcmi** never does. See [README.md#mods](../README.md#mods).
+  bundled into releases (HotA is CC BY-SA 4.0 and about 0.5 GB; WoG's `mod.json` declares no license and is about
+  0.15 GB); see [ATTRIBUTIONS.md](../ATTRIBUTIONS.md#mods). The **vcmi-hota** and **vcmi-wog** Scripts entries each
+  load only what their own fetch script staged, even if both are present; **vcmi** never loads either. See
+  [README.md#mods](../README.md#mods).

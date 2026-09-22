@@ -77,9 +77,10 @@ full-frame copy costs about 4 ms of the frame budget.
    [innoextract](https://constexpr.org/innoextract/) first; `VIDEO.VID` is not
    needed.
 3. On the MiSTer, open the OSD (F12), choose **Scripts**, and run **vcmi** (the base
-   game) or **vcmi-hota** (Horn of the Abyss, if installed; see [Mods](#mods)). The
-   screen blinks as the output switches to 800x600, and the game starts. Quit from
-   the game's own menu; the launcher switches your display back.
+   game) or, if installed, one of the mod entries such as **vcmi-hota** (see
+   [Mods](#mods)). The screen blinks as the output switches to 800x600, and the
+   game starts. Quit from the game's own menu; the launcher switches your display
+   back.
 
 The zip also holds `INSTALL.txt`, the license texts in `LICENSES/`, and
 `SOURCES.txt` listing the exact source versions and checksums.
@@ -95,7 +96,8 @@ The zip also holds `INSTALL.txt`, the license texts in `LICENSES/`, and
    ```
 
    This installs the game to `/media/fat/vcmi` and the launchers to
-   `/media/fat/Scripts/vcmi.sh` and `/media/fat/Scripts/vcmi-hota.sh`.
+   `/media/fat/Scripts/vcmi.sh`, `/media/fat/Scripts/vcmi-hota.sh` and
+   `/media/fat/Scripts/vcmi-wog.sh`.
 3. Extract the GOG installer and copy the game data across. The extraction needs
    `innoextract`; the video archive `VIDEO.VID` is skipped because video playback
    is not built.
@@ -107,8 +109,8 @@ The zip also holds `INSTALL.txt`, the license texts in `LICENSES/`, and
 
 4. Launch it from the OSD as above.
 
-To remove it, delete `/media/fat/vcmi`, `/media/fat/Scripts/vcmi.sh` and
-`/media/fat/Scripts/vcmi-hota.sh`.
+To remove it, delete `/media/fat/vcmi`, `/media/fat/Scripts/vcmi.sh`,
+`/media/fat/Scripts/vcmi-hota.sh` and `/media/fat/Scripts/vcmi-wog.sh`.
 
 ## Configuration
 
@@ -151,33 +153,37 @@ example `export SDL_MISTER_VSYNC=0`:
 VCMI's own launcher, which normally installs and enables mods, is not built (see
 [Current limitations](#current-limitations)). Mods are instead dropped into
 `/media/fat/vcmi/data/Mods` as ordinary folders, each holding a `mod.json`, and
-there are two Scripts menu entries instead of one:
+each supported mod gets its own Scripts menu entry instead of a mod manager:
 
-- **vcmi** always plays the base game: `data/Mods` is scanned for HotA's files but
-  none are loaded, no matter what is sitting in the folder.
-- **vcmi-hota** plays Horn of the Abyss (see below), plus anything else dropped
-  into `data/Mods` alongside it. If HotA was never fetched, it falls back to the
-  base game.
+- **vcmi** always plays the base game: nothing under `data/Mods` besides VCMI's
+  own base content is loaded, no matter what else is sitting in the folder.
+- **vcmi-hota** plays [Horn of the Abyss](https://github.com/vcmi-mods/horn-of-the-abyss)
+  (HotA), a fan expansion, plus its `vcmi-extras` dependency. Falls back to the
+  base game if HotA was never fetched.
+- **vcmi-wog** plays [In The Wake of Gods](https://github.com/vcmi-mods/wake-of-gods)
+  (WoG), another fan expansion. Falls back to the base game if WoG was never
+  fetched.
 
-Each keeps its own set of enabled mods in `save/modSettings.json` (the "vcmi" and
-"hota" presets), so a submod you disabled by hand in one is untouched by the
-other, and switching between the two Scripts entries does not fight over shared
-state. Saves made under one may not load under the other: HotA adds content a
-base-game save does not carry a mod dependency on until it is loaded with HotA
-active.
+Each entry keeps its own set of enabled mods in `save/modSettings.json` (a preset
+per entry), so a submod you disabled by hand in one is untouched by the others,
+switching between entries does not fight over shared state, and only that entry's
+own mod (and its own declared dependencies) are ever loaded — dropping both HotA's
+and WoG's files into `data/Mods` at the same time does not load them together,
+since each Scripts entry still only enables its own preset. Saves made under one
+may not load under another: a mod adds content a base-game (or other mod's) save
+does not carry a dependency on until it is loaded with that mod active.
 
-`tools/fetch-hota.sh` fetches [Horn of the Abyss](https://github.com/vcmi-mods/horn-of-the-abyss)
-(HotA), a fan expansion ported to VCMI, and its `vcmi-extras` dependency, and stages
-them as a drop-in `Mods` folder:
+`tools/fetch-hota.sh` and `tools/fetch-wog.sh` fetch their mod (and, for HotA, its
+`vcmi-extras` dependency) and stage them as a drop-in `Mods` folder:
 
 ```sh
-tools/fetch-hota.sh
-scripts/deploy.sh mods    # or copy work/hota-mods/Mods to /media/fat/vcmi/data/Mods yourself
+tools/fetch-hota.sh   # or tools/fetch-wog.sh, or both
+scripts/deploy.sh mods    # or copy work/mods/Mods to /media/fat/vcmi/data/Mods yourself
 ```
 
 See [tools/README.md](tools/README.md#pc-side-helper-scripts) and
-[ATTRIBUTIONS.md](ATTRIBUTIONS.md#mods) for what it does and the mod's licensing.
-HotA is the only mod tested with this project; hardware validation is in progress.
+[ATTRIBUTIONS.md](ATTRIBUTIONS.md#mods) for what each script does and the mods'
+licensing. HotA is hardware-validated; WoG has not yet been tested on hardware.
 
 ## Current limitations
 
