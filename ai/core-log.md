@@ -243,3 +243,32 @@ Have the user walk around, watching specifically for ghosting or tearing at the 
 - [ ] Passed
 
 ---
+
+## 009 COMMIT Unreleased d2965cf 2026-09-21T20:41:39-07:00
+
+#### Coming From:
+
+Unreleased d2965cf
+
+#### Purpose:
+
+Record hardware validation of the fast-pan patch (`d2965cf`) and close out the hero-movement stutter investigation.
+
+#### Outcome:
+
+The user reported no visual glitches, including after zooming while moving, so the design's correctness guards held on real hardware. A `SDL_MISTER_STATS` capture of a walk taken right after ending a turn (the user was out of movement points) showed two clearly different phases: about 60 seconds of the turn's own processing stall followed by settling-in movement, with worst-case gaps still ranging 40 to 1431 ms, matching the pre-`d2965cf` pattern; then a sustained 30-second stretch of continued walking with worst-case gaps tightly between 37 and 57 ms and a steady ~14 ms per-frame cost, the smoothest and most consistent result of this entire investigation, well beyond what patches `c09a006` or `6ce86c2` achieved alone. The user confirmed this matched their own long, uninterrupted stretch of walking. The rough phase is concentrated at the start of essentially every walk, since the user always takes a turn immediately before walking, so it likely dominates what gets noticed even though the sustained portion afterward is a real, large improvement; the turn-processing stall itself remains unaddressed by any of this investigation's patches, confirmed as a separate phenomenon since entry 003. The user judged the result "not perfect, but almost" and asked to leave it as is rather than continue.
+
+#### Next Steps:
+
+Obtain the next objective from the user. Two candidate follow-ups are now on record if the user wants to return to this later: the turn-processing stall itself (multi-second, blocked-not-computing, likely AI or local client-server round-trip cost, never investigated) and the rough settling-in period immediately after a turn ends and movement resumes (not isolated from the turn stall itself in this investigation). `CHANGELOG.md` is still missing and still needed before any release; three real, hardware-validated performance fixes (NEON blitters, batched tile blits, fast-pan) are now release candidates alongside HotA support.
+
+#### Files Modified:
+
+None.
+
+#### Status:
+
+- [x] Built
+- [x] Passed
+
+---
