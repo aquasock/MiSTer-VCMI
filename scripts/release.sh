@@ -5,8 +5,10 @@
 #   work/dist/SHA256SUMS
 #   work/dist/RELEASE_NOTES-v<version>.md  (only if docs/release-notes/<version>.md exists)
 #
-# The archive holds vcmi/ (game, libraries, launcher, license texts, source list) and Scripts/vcmi.sh. It leaves out
-# the test programs, the unlicensed fbterm-toggle helper, and any Heroes III data.
+# The archive holds vcmi/ (game, libraries, launcher, license texts, source list) and the Scripts/*.sh launchers
+# (vcmi, and one per supported mod; a mod's own launcher falls back to the base game until its files are fetched
+# separately with tools/fetch-*.sh, see README.md#mods). It leaves out the test programs, the unlicensed
+# fbterm-toggle helper, any Heroes III data, and mod files themselves.
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 
@@ -25,7 +27,7 @@ mkdir -p "$STAGE/vcmi" "$STAGE/Scripts"
 cp -a "$WORK/bundle/libs" "$WORK/bundle/data" "$WORK/bundle/run.sh" "$STAGE/vcmi/"
 mkdir -p "$STAGE/vcmi/bin"
 cp -a "$WORK/bundle/bin/vcmiclient" "$WORK/bundle/bin/vcmiserver" "$STAGE/vcmi/bin/"
-cp -a "$WORK/bundle/Scripts/vcmi.sh" "$STAGE/Scripts/"
+cp -a "$WORK/bundle/Scripts/"*.sh "$STAGE/Scripts/"
 echo "$VERSION" > "$STAGE/vcmi/VERSION"
 
 # 3. License texts of everything that ships, plus an index.
@@ -135,14 +137,17 @@ MiSTer-VCMI v$VERSION: installing
    and copy those three folders. Data/VIDEO.VID is not needed.)
    Only the GOG "Complete" release has been tested.
 
-3. On the MiSTer press F12, choose Scripts, and run "vcmi".
-   The screen blinks as the HDMI output switches to 800x600 (your display scales it to fill the screen).
-   Quit from the game's own menu; the display is switched back to 1080p60.
+3. On the MiSTer press F12, choose Scripts, and run "vcmi" for the base game. This zip also includes a Scripts
+   entry per supported mod (currently "vcmi-hota" and "vcmi-wog"); each plays the base game until you fetch that
+   mod's files yourself on a PC with the project's tools/fetch-hota.sh or tools/fetch-wog.sh and copy them to
+   /media/fat/vcmi/data/Mods (see README.md#mods). Whichever entry you run, the screen blinks as the HDMI output
+   switches to 800x600 (your display scales it to fill the screen); quit from the game's own menu and the display
+   switches back to 1080p60.
 
 Needs: a MiSTer with a DE10-Nano, a USB mouse and keyboard, and an HDMI display that accepts 800x600 at 60 Hz.
 Settings, saves and logs are kept in /media/fat/vcmi/save and /media/fat/vcmi/cache.
 
-To remove: delete /media/fat/vcmi and /media/fat/Scripts/vcmi.sh.
+To remove: delete /media/fat/vcmi and every /media/fat/Scripts/vcmi*.sh.
 More: README.md, and the license texts in LICENSES/ (see ATTRIBUTIONS.md).
 EOF
 

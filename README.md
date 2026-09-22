@@ -49,7 +49,13 @@ scene, so treat them as a guide.
 | Sound | gapless in 90 seconds of play: the audio queue never fell below about 64 ms |
 
 Hero movement is the slowest case. Both Cortex-A9 cores are busy, and every
-full-frame copy costs about 4 ms of the frame budget.
+full-frame copy costs about 4 ms of the frame budget. As of v0.2.0, the average
+per-frame cost during movement is measurably lower and sustained panning away
+from a turn holds a tight 37–57 ms worst-case frame gap (down from 100–900 ms);
+this table's fps figures predate that work and have not been remeasured the
+same way. See [docs/release-notes/0.2.0.md](docs/release-notes/0.2.0.md) for
+what changed and what still doesn't: the largest stutter spikes, and movement
+right after ending a turn, are unaffected.
 
 ## Requirements
 
@@ -263,7 +269,8 @@ which a reboot wipes.
 
 ## Documentation
 
-- [Release notes](docs/release-notes/0.1.0.md)
+- Release notes: [0.2.0](docs/release-notes/0.2.0.md), [0.1.0](docs/release-notes/0.1.0.md)
+- [Changelog](CHANGELOG.md)
 - [Tools](tools/README.md)
 - [Source attributions](ATTRIBUTIONS.md)
 - [Upstream VCMI documentation](https://github.com/vcmi/vcmi/tree/develop/docs)
