@@ -331,7 +331,7 @@ None.
 
 ---
 
-## 012 COMMIT Unreleased ??? 2026-09-21T21:02:46-07:00
+## 012 COMMIT Unreleased f85d835 2026-09-21T21:02:46-07:00
 
 #### Coming From:
 
@@ -361,7 +361,7 @@ Have the user run **vcmi-wog** from the OSD and check for visual glitches, confi
 
 #### Status:
 
-- [ ] Built
+- [x] Built
 - [ ] Passed
 
 ---
