@@ -108,13 +108,24 @@ step_sdl2() {
 		patch -s -d "$d" -p1 <"$ROOT/sdl-driver/sdl2-mister-hooks.patch"
 	fi
 	grep -q "division-free resampler" "$d/src/audio/SDL_audiocvt.c" || patch -s -d "$d" -p1 <"$ROOT/sdl-driver/sdl2-resampler.patch"
+	# SDL's software blitter is a dominant CPU cost on this hardware (see ai/core-log.md); turn on its ARM NEON
+	# blitters. Stock SDL's NEON alpha blitter leaves the destination alpha alone where the C blitter blends it, so
+	# restrict it to alpha-less destinations first (as MiSTer-GemRB found on the same hardware); also take its NEON
+	# fill, which is bit-identical to the C code.
+	grep -q "opaque destination" "$d/src/video/SDL_blit_A.c" || patch -s -d "$d" -p1 <"$ROOT/sdl-driver/sdl2-neon-blit-opaque-dst.patch"
+	grep -q "BlendFillRect_ARGB8888_BlendNEON" "$d/src/render/software/SDL_blendfillrect.c" || patch -s -d "$d" -p1 <"$ROOT/sdl-driver/sdl2-blendfillrect-neon.patch"
 	mkdir -p "$d/src/video/mister" "$d/src/audio/mister"
 	cp "$ROOT"/sdl-driver/mister/* "$d/src/video/mister/"
 	cp "$ROOT"/sdl-driver/mister-audio/* "$d/src/audio/mister/"
-	local h; h=$(cat "$ROOT"/sdl-driver/mister/* "$ROOT"/sdl-driver/mister-audio/* "$ROOT/sdl-driver/sdl2-mister-hooks.patch" "$ROOT/sdl-driver/sdl2-resampler.patch" | md5sum | cut -d' ' -f1)
+	local h; h=$(cat "$ROOT"/sdl-driver/mister/* "$ROOT"/sdl-driver/mister-audio/* "$ROOT/sdl-driver/sdl2-mister-hooks.patch" "$ROOT/sdl-driver/sdl2-resampler.patch" \
+		"$ROOT/sdl-driver/sdl2-neon-blit-opaque-dst.patch" "$ROOT/sdl-driver/sdl2-blendfillrect-neon.patch" | md5sum | cut -d' ' -f1)
 	[ "$(cat "$STAMPS/sdl2.driver" 2>/dev/null)" = "$h" ] || { rm -f "$STAMPS/sdl2"; echo "$h" >"$STAMPS/sdl2.driver"; }
 	# Shared, so the drivers can be updated without relinking VCMI. Other audio backends stay off.
-	cm sdl2 "$d" -DSDL_MISTER=ON -DSDL_MISTERAUDIO=ON \
+	# ARMNEON_FOUND=1 and the project-include (enable_language(ASM)) work around SDL's NEON detection needing a
+	# runnable test binary, which try_run can't reliably give during cross-compilation even under the qemu-arm
+	# emulator; both are needed for the pixman NEON assembly to actually get compiled in and used.
+	cm sdl2 "$d" -DSDL_MISTER=ON -DSDL_MISTERAUDIO=ON -DSDL_ARMNEON=ON -DARMNEON_FOUND=1 \
+		-DCMAKE_PROJECT_SDL2_INCLUDE="$ROOT/scripts/enable-asm.cmake" \
 		-DBUILD_SHARED_LIBS=ON -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TESTS=OFF -DSDL_TEST=OFF \
 		-DSDL_X11=OFF -DSDL_WAYLAND=OFF -DSDL_KMSDRM=OFF -DSDL_VULKAN=OFF -DSDL_OPENGL=OFF \
 		-DSDL_OPENGLES=OFF -DSDL_RPI=OFF -DSDL_VIVANTE=OFF -DSDL_OFFSCREEN=ON \

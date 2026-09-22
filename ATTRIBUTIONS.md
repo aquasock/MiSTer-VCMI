@@ -111,6 +111,23 @@ not to this project's original code.
   SDL's internal driver interfaces and modelled on SDL's own `offscreen`, `kmsdrm`
   and `disk` drivers. They are offered under this project's GPL-2.0-or-later terms
   and are compatible with SDL's zlib license when built into the SDL library.
+- `sdl-driver/sdl2-neon-blit-opaque-dst.patch` and `sdl-driver/sdl2-blendfillrect-neon.patch`
+  are modifications of SDL and remain under SDL's zlib license, like this
+  project's other `sdl-driver/sdl2-*.patch` files. Both were first written for
+  MiSTer-GemRB, a sibling project by the same author on the same MiSTer/Cortex-A9
+  target, and are ported here unchanged. SDL's software blitter is a dominant CPU
+  cost on this hardware during adventure-map scrolling; the first restricts SDL's
+  existing ARM NEON alpha blitter (from pixman, see below) to destinations without
+  an alpha channel, where it is correct, and the second adds a NEON translucent
+  rectangle fill, bit-identical to the C code it replaces.
+- `scripts/enable-asm.cmake` is a one-line CMake include (`enable_language(ASM)`)
+  that works around SDL's NEON support detection needing a runnable test binary,
+  which is unreliable when cross-compiling even under the `qemu-arm` emulator this
+  project already uses for other `try_run` checks. It is plain CMake boilerplate,
+  not creative content, so it carries no separate license notice.
+- The NEON assembly blitters this enables (`SDL_ARMNEON=ON`) compile in
+  `src/video/arm/pixman-arm-neon-asm.S` from pixman, Copyright © 2009 Nokia
+  Corporation, MIT license. It is unmodified.
 
 Codecs and loaders that SDL's libraries build in, and that end up in the bundle:
 
