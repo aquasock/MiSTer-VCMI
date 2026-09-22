@@ -72,6 +72,11 @@ GPL-2.0-or-later license. They are applied by `scripts/build-vcmi.sh`.
 - `0003-software-renderer-draw-into-texture.patch` — draws into the software
   renderer's texture memory, skips a redundant clear, makes the screen texture
   opaque, and holds the interface mutex while the screen is copied.
+- `0004-mapview-batch-tile-blits.patch` — while the adventure map is panning,
+  `MapViewCache::render` must redraw every visible tile every frame; it now
+  merges runs of adjacent tiles that are contiguous in both the tile cache and
+  the screen into one blit instead of one call per tile, cutting the per-frame
+  call count on this hardware without changing which pixels get drawn.
 
 ## Mods
 

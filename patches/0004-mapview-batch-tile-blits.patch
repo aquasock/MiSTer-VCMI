@@ -1,0 +1,60 @@
+diff --git a/client/mapView/MapViewCache.cpp b/client/mapView/MapViewCache.cpp
+index e8bf91e..63f0e5d 100644
+--- a/client/mapView/MapViewCache.cpp
++++ b/client/mapView/MapViewCache.cpp
+@@ -146,23 +146,49 @@ void MapViewCache::render(const std::shared_ptr<IMapRendererContext> & context,
+ 
+ 	Rect dimensions = model->getTilesTotalRect();
+ 
++	// The cache wraps every wrapAt columns/rows (a tile's cache slot is reused as the view scrolls), so a run of
++	// tiles that all need drawing is contiguous in both cache space and target space only until that wrap point.
++	// Blitting such a run in one call instead of one call per tile matters here: while panning, lazyUpdate is off
++	// and every visible tile (several hundred) needs drawing every frame, and each SDL blit call has enough fixed
++	// overhead on this hardware that merging adjacent ones into fewer, wider blits is a large, visually identical
++	// win. This changes call count only: the merged blit copies exactly the pixels the per-tile blits would have.
++	int wrapX = static_cast<int>(terrainChecksum.shape()[0]);
++
+ 	for(int y = dimensions.top(); y < dimensions.bottom(); ++y)
+ 	{
+-		for(int x = dimensions.left(); x < dimensions.right(); ++x)
++		int cacheY = (terrainChecksum.shape()[1] + y) % terrainChecksum.shape()[1];
++
++		for(int x = dimensions.left(); x < dimensions.right(); )
+ 		{
+-			int cacheX = (terrainChecksum.shape()[0] + x) % terrainChecksum.shape()[0];
+-			int cacheY = (terrainChecksum.shape()[1] + y) % terrainChecksum.shape()[1];
+-			int3 tile(x, y, model->getLevel());
++			int cacheX = (wrapX + x) % wrapX;
+ 
+ 			if(lazyUpdate && tilesUpToDate[cacheX][cacheY])
++			{
++				++x;
+ 				continue;
++			}
+ 
+-			Canvas source = getTile(tile);
++			int runLength = 1;
++			while(x + runLength < dimensions.right() && cacheX + runLength < wrapX &&
++				(!lazyUpdate || !tilesUpToDate[cacheX + runLength][cacheY]))
++			{
++				++runLength;
++			}
++
++			int3 tile(x, y, model->getLevel());
++			Rect firstTileArea = model->getCacheTileArea(tile);
++			Rect runArea(firstTileArea.topLeft(), Point(firstTileArea.w * runLength, firstTileArea.h));
++			Canvas source(*terrain, runArea);
+ 			Rect targetRect = model->getTargetTileArea(tile);
+ 			target.draw(source, targetRect.topLeft());
+ 
+ 			if (!fullRedraw)
+-				tilesUpToDate[cacheX][cacheY] = true;
++			{
++				for(int i = 0; i < runLength; ++i)
++					tilesUpToDate[cacheX + i][cacheY] = true;
++			}
++
++			x += runLength;
+ 		}
+ 	}
+ 
