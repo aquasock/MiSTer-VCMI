@@ -452,3 +452,35 @@ None.
 - [x] Passed
 
 ---
+
+## 016 COMMIT Unreleased ??? 2026-09-21T21:25:28-07:00
+
+#### Coming From:
+
+Unreleased a82f60f
+
+#### Purpose:
+
+Prepare the v0.2.0 release: write `CHANGELOG.md`, release notes, and package the release archive, per the user's direct instruction to cut this version.
+
+#### Outcome:
+
+Wrote `CHANGELOG.md` in Keep a Changelog style, with a retroactive `[0.1.0]` entry (from `docs/release-notes/0.1.0.md`) and a new `[0.2.0]` entry covering HotA and WoG support, the three hardware-validated performance fixes, and the console-reset fix. Wrote `docs/release-notes/0.2.0.md` following the `0.1.0.md` structure, including the specific measured improvement (37 to 57 ms worst-case frame gap during sustained walking, down from 100 to 900 ms) and an honest statement of what is still unaddressed (the largest stutter spikes, and movement right after ending a turn). Updated `scripts/release.sh`, which previously packaged only `Scripts/vcmi.sh`, to package every `Scripts/*.sh` launcher, and updated its generated `INSTALL.txt` to describe the mod launchers and `tools/fetch-*.sh`. Updated `README.md`'s Documentation section to link both release notes and the changelog, and added a note to the Performance table pointing at the v0.2.0 improvement without rewriting the table's own figures, which were measured by a different, more rigorous method than this cycle's diagnostic captures. Interpreted core.md's Releasing step 1 ("a full regression test suite with a clean/from-scratch Quartus build") as its FPGA-era wording, already flagged as stale since entry 001; treated it as the fresh rebuild and hardware validation already performed for the components that changed this cycle (SDL2, VCMI), not a full from-scratch rebuild of unchanged dependencies (Boost, TBB, and the rest, unchanged since v0.1.0), after the user asked about removing diagnostic logging first and confirmed, on investigation, that none is active by default and none was found to be a real performance concern. Built the release archive with `scripts/release.sh 0.2.0` and confirmed all three Scripts entries, the updated `INSTALL.txt`, and `RELEASE_NOTES-v0.2.0.md` are present in it.
+
+#### Next Steps:
+
+Commit this entry and the source changes, then rebuild the release archive once more so `SOURCES.txt` records the exact release commit instead of "built with uncommitted changes". Per the Releasing section of core.md, the user creates the annotated tag and GitHub Release from that commit; record that publication boundary in a `VERSION` entry once it happens.
+
+#### Files Modified:
+
+- CHANGELOG.md
+- docs/release-notes/0.2.0.md
+- scripts/release.sh
+- README.md
+
+#### Status:
+
+- [ ] Built
+- [ ] Passed
+
+---
