@@ -330,3 +330,38 @@ None.
 - [x] Passed
 
 ---
+
+## 012 COMMIT Unreleased ??? 2026-09-21T21:02:46-07:00
+
+#### Coming From:
+
+Unreleased e098077
+
+#### Purpose:
+
+Add In The Wake of Gods (WoG) as a second mod, following the same drop-in pattern as HotA, per the user's direct instruction.
+
+#### Outcome:
+
+Researched WoG the same way as HotA in entry 002: release `1.7` of `vcmi-mods/wake-of-gods`, version 9.1.82, about 99 MB, `mod.json` declares no license (same as `vcmi-extras`). Unlike HotA it needs no sibling mod; its only external references are optional `mithril` compatibility submods for other terrain mods (including HotA's), which are pruned when those mods are not also staged. `tools/fetch-wog.sh` mirrors `tools/fetch-hota.sh`. Building it exposed two problems in the existing HotA tooling that a single-mod design had not needed to handle. First, the shared staging directory (renamed `work/hota-mods` to `work/mods` since it now holds more than one mod) was being `rm -rf`'d wholesale before each install and its dependency-pruning pass scanned every top-level folder under it, so fetching one mod could delete or prune another's files; both scripts now touch only their own subfolder and only prune within it, while still checking dependencies against everything staged. Second, and more subtly: WoG's own submods cross-reference each other using its upstream folder name (`wake-of-gods.creatures`, for example), and VCMI derives a mod's id from its folder name, so the initial attempt to shorten the staged folder to `wog` (matching the intended `vcmi-wog` launcher name) silently broke those internal references, causing `tools/fetch-wog.sh`'s own pruning pass to wrongly delete submods whose dependencies were, in fact, present (`wog.stackexperience` and `wog.creaturebanks` among others). Caught by inspecting the prune list rather than by a build or hardware failure. Fixed by keeping the staged folder as `wake-of-gods` and mapping the short `wog` preset name to it in `scripts/bundle.sh`'s `select_preset`, which was also generalized while fixing this: it previously hardcoded a single "hota" preset that blindly included every top-level mod folder found, which would have loaded WoG and HotA together the moment both were staged; it now uses a small table of preset name to (root mod folder, declared sibling mods), so each Scripts entry loads only its own mod, confirmed with both mods staged simultaneously. Verified: both fetch scripts run correctly together (regression-tested that the fix did not change HotA's kept/removed submod counts), all three presets (`vcmi`, `hota`, `wog`) build correctly under a PC test harness including cross-contamination checks in both directions, the `wog`-not-installed fallback works, and a real `vcmiserver --dummy-run` loads WoG's content cleanly (53 mods, "All game content loaded", no errors) as well as a HotA regression re-check (72 mods, unchanged from before). Deployed directly to the user's MiSTer (no game was running); `Scripts/vcmi-wog.sh`, `data/Mods/wake-of-gods` (170 MB) and the updated `run.sh` all confirmed present. Not yet visually validated on hardware.
+
+#### Next Steps:
+
+Have the user run **vcmi-wog** from the OSD and check for visual glitches, confirm the base game (**vcmi**) still shows no mod content, and if both HotA and WoG are staged, confirm each Scripts entry only loads its own mod. `CHANGELOG.md` is still missing and still needed before any release; the release candidate now includes two mods and three performance fixes.
+
+#### Files Modified:
+
+- tools/fetch-wog.sh
+- tools/fetch-hota.sh
+- scripts/bundle.sh
+- scripts/deploy.sh
+- README.md
+- tools/README.md
+- ATTRIBUTIONS.md
+
+#### Status:
+
+- [ ] Built
+- [ ] Passed
+
+---
