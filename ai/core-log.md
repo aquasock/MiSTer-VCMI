@@ -149,3 +149,36 @@ None.
 - [x] Passed
 
 ---
+
+## 006 COMMIT Unreleased ??? 2026-09-21T20:01:12-07:00
+
+#### Coming From:
+
+Unreleased c300672
+
+#### Purpose:
+
+Investigate the user's long-standing report that the adventure map stutters badly during hero movement but nowhere else, and fix what the investigation found.
+
+#### Outcome:
+
+Diagnosed live on the user's hardware using the on-device tools plus the driver's own `SDL_MISTER_STATS`/`SDL_MISTER_PROFILE` instrumentation (the first attempt used relative paths, which the driver silently drops for `SDL_MISTER_STATS` and which also failed for `SDL_MISTER_PROFILE`, most likely because VCMI changes its working directory at startup; absolute paths fixed it). Idle screens ran about 45 to 58 fps with a 4 to 13 ms per-frame game-thread cost and 50 to 90 ms worst-case gaps; hero movement ran about 20 to 50 fps, jittery, with a 13 to 45 ms per-frame cost and 100 to 900 ms worst-case gaps; ending a turn produced separate multi-second stalls where the game thread was mostly blocked rather than computing, which is a different, expected phenomenon the user was not describing. A CPU profile during movement found the dominant costs in SDL2's scalar software blit routines, particularly the colorkey blitter `BlitNtoNKey`, and confirmed in VCMI's own source (`client/mapView/MapViewCache.cpp`) that camera movement disables the renderer's lazy-update path, forcing a full-viewport recomposite every frame, which idle screens and battle do not do; this is architectural to VCMI's renderer, not a bug introduced by this project. The user pointed at the sibling MiSTer-GemRB project (same author, same Cortex-A9 target), which had already solved the same class of problem: its `neon-blit-opaque-dst.patch` fixes a real correctness bug in SDL's stock ARM NEON alpha blitter, which leaves destination alpha unblended where the C blitter blends it, by restricting the accelerated path to destinations without an alpha channel; its `blendfillrect-neon.patch` adds a NEON translucent-rectangle fill that is bit-identical to the C code; and its `enable-asm.cmake` project-include works around SDL's NEON detection needing a runnable test binary, which `try_run` cannot reliably give under cross-compilation even with this project's own `qemu-arm` emulator wired in. Both patches were ported unchanged into `sdl-driver/`, wired into `scripts/build-deps.sh`'s `step_sdl2` with `-DSDL_ARMNEON=ON -DARMNEON_FOUND=1`, and confirmed by disassembly to be compiled in (63 inlined NEON vector instructions in the alpha-fill path; the NEON alpha-blit dispatch and its external pixman assembly symbol both present). Neither patch touches `BlitNtoNKey`, the colorkey blitter that dominated the profile; stock SDL2 has no NEON acceleration for it. Deployed directly to the user's MiSTer and validated with a clean before/after `SDL_MISTER_STATS` comparison: the user saw no visual glitches, and the data shows the movement-phase average per-frame cost fell from about 16.8 to 15.7 ms (roughly 6 to 7 percent) and idle-screen smoothness improved more clearly, worst-case gaps falling from 50 to 90 ms to a tight 20 to 24 ms and per-frame cost from about 4.2 to 3.7 ms; the large 600 to 900 ms stutter spikes during movement are unchanged, as expected, since they come from the untouched colorkey path. The user asked to keep the fix.
+
+#### Next Steps:
+
+Obtain the next objective from the user. A larger fix for the movement stutter itself would mean patching VCMI's own `MapViewCache` to avoid recompositing the full viewport every scrolled frame, which is a bigger and riskier change to upstream game logic than anything done here and was not undertaken in this cycle; it remains available as a future option if the user wants to pursue it. `CHANGELOG.md` is still missing and still needed before any release.
+
+#### Files Modified:
+
+- scripts/build-deps.sh
+- sdl-driver/sdl2-neon-blit-opaque-dst.patch
+- sdl-driver/sdl2-blendfillrect-neon.patch
+- scripts/enable-asm.cmake
+- ATTRIBUTIONS.md
+
+#### Status:
+
+- [ ] Built
+- [ ] Passed
+
+---
