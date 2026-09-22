@@ -144,6 +144,28 @@ example `export SDL_MISTER_VSYNC=0`:
 | `SDL_MISTER_PROFILE=<file>` | Sample where each thread spends CPU; resolve it with `tools/profsym.py` |
 | `SDL_MISTER_DEBUG=1` | Log what the drivers do |
 
+## Mods
+
+VCMI's own launcher, which normally installs mods, is not built (see
+[Current limitations](#current-limitations)). Mods are instead dropped into
+`/media/fat/vcmi/data/Mods` as ordinary folders, each holding a `mod.json`. The
+launcher looks there on every start and enables any mod folder not already known
+to `save/modSettings.json`, keeping whatever is already set there, including a
+mod you disabled by hand.
+
+`tools/fetch-hota.sh` fetches [Horn of the Abyss](https://github.com/vcmi-mods/horn-of-the-abyss)
+(HotA), a fan expansion ported to VCMI, and its `vcmi-extras` dependency, and stages
+them as a drop-in `Mods` folder:
+
+```sh
+tools/fetch-hota.sh
+scripts/deploy.sh mods    # or copy work/hota-mods/Mods to /media/fat/vcmi/data/Mods yourself
+```
+
+See [tools/README.md](tools/README.md#pc-side-helper-scripts) and
+[ATTRIBUTIONS.md](ATTRIBUTIONS.md#mods) for what it does and the mod's licensing.
+HotA is the only mod tested with this project; hardware validation is in progress.
+
 ## Current limitations
 
 - **800x600 is the supported size.** VCMI needs at least 800x600, and the FPGA
@@ -158,7 +180,8 @@ example `export SDL_MISTER_VSYNC=0`:
   and the machine-learning AI. SDL_mixer is built without MIDI, tracker-module,
   Opus and WavPack support.
 - **Only the GOG Heroes III Complete data has been tested.** Other editions,
-  mods, campaigns in depth and networked multiplayer have not.
+  campaigns in depth and networked multiplayer have not. Horn of the Abyss (see
+  [Mods](#mods)) is the only mod tested so far.
 - **Your original HDMI mode is not saved.** The MiSTer here has no `MiSTer.ini`, so
   the launcher restores 1080p60. Set `MISTER_RESTORE_MODE` if your display uses
   something else.
@@ -214,7 +237,8 @@ which a reboot wipes.
 - `sdl-driver/*.c` — small test programs: `sdl_test.c`, `sdl_bench.c` (the present
   pipeline), `sdl_audiotest.c` and `membench.c` (framebuffer copy speed).
 - `patches/` — the changes to VCMI, applied in order by `build-vcmi.sh`.
-- `tools/` — on-device test and profiling tools; see [tools/README.md](tools/README.md).
+- `tools/` — on-device test and profiling tools, and PC-side mod-fetching scripts;
+  see [tools/README.md](tools/README.md).
 - `work/` — created by the scripts: downloads, sources, build trees, the install
   prefix and the bundle. Not tracked.
 

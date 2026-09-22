@@ -118,6 +118,30 @@ if r.get("width") != w or r.get("height") != h:
 PY
 }
 
+# Mods are dropped into data/Mods as folders (each with a mod.json) instead of being installed by VCMI's launcher, and VCMI only
+# loads root mods that are in the active preset of save/modSettings.json. So list every mod folder there; entries already in the
+# file, including submod settings, are kept. To turn a mod off, remove its folder.
+enable_mods() {
+	command -v python3 >/dev/null 2>&1 || return 0
+	python3 - <<'PY'
+import json, os
+p = "save/modSettings.json"
+mods_dir = "data/Mods"
+found = sorted(d.lower() for d in os.listdir(mods_dir) if os.path.isfile(os.path.join(mods_dir, d, "mod.json"))) if os.path.isdir(mods_dir) else []
+try:
+    cfg = json.load(open(p)) if os.path.exists(p) else {}
+except Exception:
+    raise SystemExit(0)   # unreadable file: leave it alone
+preset = cfg.setdefault("presets", {}).setdefault(cfg.setdefault("activePreset", "default"), {})
+mods = preset.setdefault("mods", ["vcmi", "core"])
+new = [m for m in found if m not in mods]
+if new:
+    mods.extend(new)
+    json.dump(cfg, open(p, "w"), indent="\t")
+PY
+}
+enable_mods
+
 switched=0
 restore_mode() {
 	[ "$switched" = 1 ] || return 0

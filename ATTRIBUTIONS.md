@@ -73,6 +73,27 @@ GPL-2.0-or-later license. They are applied by `scripts/build-vcmi.sh`.
   renderer's texture memory, skips a redundant clear, makes the screen texture
   opaque, and holds the interface mutex while the screen is copied.
 
+## Mods
+
+Not part of the project or the release bundle. `tools/fetch-hota.sh` downloads
+these at the user's request and stages them under `work/hota-mods/`, which is not
+tracked; see [tools/README.md](tools/README.md#pc-side-helper-scripts).
+
+- **Horn of the Abyss** (HotA), release `1.7` of the `vcmi-mods/horn-of-the-abyss`
+  port, version 1.8.005. Licensed CC-BY-SA 4.0. Authors: VCMI Team, edeksumo,
+  avatar, Loki Laufeyjarson, Ben, Karyoplasma; assets created by the HotA Crew.
+  Source: <https://github.com/vcmi-mods/horn-of-the-abyss>.
+- **VCMI extras**, release `1.7` of `vcmi-mods/vcmi-extras`, version 3.9.4, by the
+  VCMI Team. Fetched because a HotA submod (`hota.cove.covecampaignheroesinmaps`
+  and others) depends on it. Its `mod.json` and GitHub repository do not declare a
+  license.
+
+Both are fetched from the official VCMI mod repository listing
+(`vcmi/vcmi-mods-repository`, `vcmi-1.7.json`) and checked against a pinned
+SHA-256 sum. Redistributing either mod's files is subject to their own license
+terms above, separate from this project's GPL-2.0-or-later/GPL-3.0-or-later
+baseline.
+
 ## SDL and its extension libraries
 
 [SDL2](https://libsdl.org) 2.32.10, SDL2_image 2.8.12, SDL2_mixer 2.8.1 and
