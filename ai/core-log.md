@@ -60,3 +60,32 @@ The user runs `tools/fetch-hota.sh` then `scripts/deploy.sh mods` (or copies `wo
 - [ ] Passed
 
 ---
+
+## 003 COMMIT Unreleased 8047fc9 2026-09-21T19:17:17-07:00
+
+#### Coming From:
+
+Unreleased 8047fc9
+
+#### Purpose:
+
+Record hardware validation of the Horn of the Abyss mod support from `8047fc9`.
+
+#### Outcome:
+
+The agent deployed `8047fc9` directly to the user's MiSTer with `scripts/deploy.sh code` then `scripts/deploy.sh mods`, and confirmed on the device before handing off that `hota`, `vcmi-extras` and `vcmi` were all present under `data/Mods`, that `run.sh` carried the new `enable_mods` step, and that game data and existing saves were untouched, with 452 GB of SD card and 454 MB of RAM free. The agent did not launch the game itself, since that would switch the user's live HDMI output. The user then played on hardware and reported "it works great, everything passes," a blanket pass with no numeric detail volunteered, so no frame-time, memory or load-time figures beyond the pre-launch check above are recorded here.
+
+#### Next Steps:
+
+Obtain the next objective from the user. Hardware-validated HotA support is a new capability, which the Versioning section of core.md ties to a MINOR bump (0.1.0 to 0.2.0); this should be raised with the user as a release candidate. A release would need `CHANGELOG.md`, flagged as missing since entry 001 and still absent, plus a full regression pass per the Releasing section before any tag.
+
+#### Files Modified:
+
+None.
+
+#### Status:
+
+- [x] Built
+- [x] Passed
+
+---
