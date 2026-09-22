@@ -182,3 +182,33 @@ Obtain the next objective from the user. A larger fix for the movement stutter i
 - [x] Passed
 
 ---
+
+## 007 COMMIT Unreleased ??? 2026-09-21T20:22:15-07:00
+
+#### Coming From:
+
+Unreleased 6ce86c2
+
+#### Purpose:
+
+Reduce the movement-stutter cost that `6ce86c2`'s NEON blitters did not touch, by cutting the per-frame blit call count in VCMI's own adventure-map compositing.
+
+#### Outcome:
+
+Traced the exact mechanism in VCMI's source: the per-tile content refresh (`MapRenderer::renderTile`, the expensive `BlitNtoNKey`-heavy sprite compositing) is driven by an animation timer (`animationTime / 180ms` in `MapRendererContext.cpp`) and runs at roughly the same amortized rate whether the camera is moving or not, so it is not the movement-specific cost. What is movement-specific is `MapViewCache::render`'s final compositing step: it disables its own skip-unchanged-tiles optimization whenever the camera moves, forcing every visible tile (several hundred) to be blitted individually into the target every frame. Confirmed that consecutive visible tiles are also contiguous in VCMI's tile cache except at one wraparound seam per row (the cache is a ring buffer sized to the visible tile count), so `patches/0004-mapview-batch-tile-blits.patch` merges runs of adjacent tiles that all need drawing into one wider blit instead of one call per tile; this changes call count only; the merged blit copies exactly the pixels the per-tile blits already did, so the output is provably unchanged. Chose this over the bigger "shift the previous frame and redraw only the exposed edge" design (discussed with the user as option 2) as a lower-risk first step, since it cannot introduce a visual difference from the unpatched behavior. Verified by compiling successfully, applying cleanly to a pristine checkout, and a clean `vcmiserver --dummy-run` regression pass on the PC; a headless client smoke test was attempted but abandoned as not worth the setup cost, since VCMI's own `--testsave`/`--testmap`/`--headless` paths are unreliable for this outside real hardware (an unrelated pre-existing crash on a nonexistent test save was hit and traced away from the patch). Deployed directly to the user's MiSTer; the user reported no visual glitches after walking around. A clean stats comparison against the prior (NEON-only) baseline, restricted to the steady walking portion of the capture past load and cache-warmup, showed the average per-frame game-thread cost fall from about 15.7 to 13.7 ms, a further roughly 13 percent on top of the NEON fix and about 18 percent from the original baseline; the worst-case 500 to 900 ms stutter spikes during movement were unchanged, as expected, since this patch addresses steady per-frame overhead, not the periodic large stalls. The user asked to keep this patch and proceed to the bigger frame-shift design (option 2) to address those remaining spikes.
+
+#### Next Steps:
+
+Design and implement option 2: keep a persisted snapshot of the previously composited map view, blit it shifted by the pan delta into the target in one call, then redraw only the newly exposed edge plus whichever tiles `updateTile` actually flagged as changed this frame, falling back to the current full-redraw behavior on zoom change, view transitions, or a camera jump larger than one screen. This needs a genuinely separate snapshot buffer (not a same-surface self-blit, which SDL2 does not guarantee is safe for overlapping regions) and careful shift-direction and edge-region math; it is materially riskier than this entry's change and needs the same build/deploy/user-visual-check/stats-comparison cycle before being kept.
+
+#### Files Modified:
+
+- patches/0004-mapview-batch-tile-blits.patch
+- ATTRIBUTIONS.md
+
+#### Status:
+
+- [ ] Built
+- [ ] Passed
+
+---
