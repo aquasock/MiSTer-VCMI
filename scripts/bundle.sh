@@ -63,6 +63,14 @@ cat > "$OUT/run.sh" <<'RUN'
 #   MISTER_RESTORE_MODE="<modeline>"     mode to switch back to afterwards (default: 1080p60)
 #   SDL_MISTER_STATS=/media/fat/vcmi/cache/present-stats.log
 cd "$(dirname "$0")"
+
+# The video driver switches this console to graphics mode while the game runs and back afterwards. If the game
+# crashes it cannot, and the console then stays invisible (a black screen where the OSD's "press ENTER to
+# continue" prompt should be, after quitting) until something puts it back in text mode. So do that now, in case
+# a previous run left it that way, and again when the game ends however it ended.
+reset_console() { python3 -c 'import fcntl; fcntl.ioctl(0, 0x4B3A, 0)' 2>/dev/null; }
+reset_console
+
 export PORTMASTER_HOME="$PWD"
 export GCONV_PATH="$PWD/libs/gconv"
 mkdir -p save cache
@@ -191,6 +199,7 @@ trap 'kill -TERM $child 2>/dev/null' TERM HUP INT
 wait $child
 rc=$?
 wait $child 2>/dev/null   # a trapped signal ends the first wait early
+reset_console
 restore_mode
 exit $rc
 RUN
