@@ -423,3 +423,32 @@ Have the user quit the game from any of the three Scripts entries and confirm th
 - [ ] Passed
 
 ---
+
+## 015 COMMIT Unreleased a82f60f 2026-09-21T21:18:33-07:00
+
+#### Coming From:
+
+Unreleased a82f60f
+
+#### Purpose:
+
+Record hardware validation of the console-reset fix (`a82f60f`) for the post-quit black screen reported in entry 013.
+
+#### Outcome:
+
+The user confirmed the game now exits cleanly, with the OSD's "press ENTER to continue" prompt visible instead of a black screen. The fix, ported from the sibling MiSTer-GemRB project, is closed.
+
+#### Next Steps:
+
+Obtain the next objective from the user. The standing items are the missing `CHANGELOG.md` and the accumulated release candidate: HotA and WoG support, three performance fixes (NEON blitters, batched tile blits, fast-pan), and the console-reset fix, all hardware-validated and waiting on a version decision.
+
+#### Files Modified:
+
+None.
+
+#### Status:
+
+- [x] Built
+- [x] Passed
+
+---
