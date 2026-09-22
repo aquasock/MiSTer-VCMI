@@ -272,3 +272,32 @@ None.
 - [x] Passed
 
 ---
+
+## 010 COMMIT Unreleased e098077 2026-09-21T20:44:19-07:00
+
+#### Coming From:
+
+Unreleased d2965cf
+
+#### Purpose:
+
+Record hardware validation of `e098077`, open and untested since entry 001.
+
+#### Outcome:
+
+`e098077` (SDL driver: cache input device classification instead of reopening every node on each rescan) has, without anyone deliberately arranging it, been running on the user's MiSTer for the entire stutter investigation: every SDL2 rebuild since `6ce86c2` picks up whatever is currently in `sdl-driver/mister/`, which has included `e098077`'s change since before this session began, and the deployed `libSDL2-2.0.so.0` was confirmed byte-identical to the local build. Hours of ordinary play across the NEON, batched-blit and fast-pan test cycles turned up no input problems, which is de facto evidence for basic functionality but does not specifically exercise the hotplug path the commit changed. The user has separately tested that path directly: unplugging and replugging a USB mouse or keyboard while the game runs continues to work. Both Status boxes, left unchecked since entry 001 for lack of any hardware test, are now checked.
+
+#### Next Steps:
+
+Obtain the next objective from the user. With this closed, the only items left on the standing list are the turn-processing stall (never investigated), the missing `CHANGELOG.md`, and the accumulated release candidate (HotA support plus the NEON, batched-blit and fast-pan performance fixes) still waiting on a version decision.
+
+#### Files Modified:
+
+None.
+
+#### Status:
+
+- [x] Built
+- [x] Passed
+
+---
