@@ -484,3 +484,32 @@ Per the Releasing section of core.md, the user creates the annotated tag and Git
 - [ ] Passed
 
 ---
+
+## 017 VERSION v0.2.0 68b4da6 2026-09-25T07:47:48-07:00
+
+#### Coming From:
+
+Unreleased 68b4da6
+
+#### Purpose:
+
+Record the publication of release `v0.2.0` from `68b4da6`, the boundary prepared in entry 016.
+
+#### Outcome:
+
+The user created the annotated tag `v0.2.0` at `68b4da6` and published the GitHub pre-release "MiSTer-VCMI v0.2.0" at 2026-09-21T21:32:00-07:00, both confirmed against the online repository at session recovery. No source changes exist between `68b4da6` and the current `main`; only `ai/` metadata commits follow it. This entry closes entry 016: its release preparation is accepted, and its unchecked Passed box is superseded here rather than edited, per core-syntax.md. Every component in the release (HotA and WoG support, NEON blitters, batched tile blits, fast-pan, and the console-reset fix) was hardware-validated in entries 009, 010, 013 and 015 before packaging. The user also confirmed at recovery that the project works on `main`, resolving the `master`/`main` mismatch raised in entry 001; core.md's Build Environment wording is unchanged, since core.md is only edited on explicit request, and the Quartus Prime and QMTech references plus the Quartus-specific Releasing step 1 remain stale as noted in entry 001.
+
+#### Next Steps:
+
+Obtain the next objective from the user. `CHANGELOG.md` already carries an empty `Unreleased` section for the next development cycle. No open bugs or validation items remain on record.
+
+#### Files Modified:
+
+None.
+
+#### Status:
+
+- [x] Built
+- [x] Passed
+
+---
